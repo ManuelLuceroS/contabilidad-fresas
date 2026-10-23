@@ -164,3 +164,108 @@ Compruebe los saldos conectando una instancia aislada a `nexo_recuperada`. Para 
 ## Alcance y ampliaciones
 
 Implementados los módulos operativos solicitados. No incluye facturación electrónica DIAN, inventario/costo de mercancía, contabilidad de partida doble, saldos a favor, anulación/reversión de operaciones o `.xlsx` nativo. Los pagos superiores a la deuda se rechazan. No se debe corregir el historial mediante SQL: una futura función de reversión debe crear movimientos compensatorios auditados. El despliegue en un servidor real, dominio, certificados, programación de respaldos y validación bajo carga productiva dependen de la infraestructura elegida. La suite también se verificó contra PostgreSQL 17 en un contenedor aislado; todavía debe validarse la infraestructura de destino antes de cargar datos reales.
+
+## Despliegue en Vercel
+
+Use el preset **Django**, raíz del repositorio y los comandos automáticos de
+instalación/build (quite overrides de Docker, gunicorn y migraciones en build).
+`manage.py` y `config.wsgi.application` ya son los puntos de entrada correctos.
+Vercel importa los ajustes durante el build: un error de configuración puede
+aparecer como `Failed to read Django application settings from .../manage.py`.
+Busque la excepción Python anterior en el log completo; no cambie DEBUG para
+ocultarla. En particular, `DEBUG=false` sin `SECRET_KEY` produce
+`RuntimeError: Configure SECRET_KEY en producción`.
+
+Configure estas variables en **Production**, disponibles tanto en build como en
+runtime, y cree un nuevo deployment después de guardarlas:
+
+```dotenv
+DEBUG=false
+ALLOWED_HOSTS=contabilidad-fresas.vercel.app
+CSRF_TRUSTED_ORIGINS=https://contabilidad-fresas.vercel.app
+TRUST_PROXY=true
+SECRET_KEY=<clave aleatoria privada y estable>
+DATABASE_URL=postgresql://USUARIO:CLAVE@HOST:5432/BASE?sslmode=require
+```
+
+Genere SECRET_KEY con `python -c 'import secrets; print(secrets.token_urlsafe(64))'`
+y guárdela únicamente en el gestor de variables de Vercel. No use el texto entre
+ángulos como valor. Use la URL real de un PostgreSQL externo persistente; codifique
+los caracteres especiales del usuario/contraseña según el formato URL. Prefiera
+la conexión con pool que ofrezca su proveedor para funciones serverless.
+No regenere SECRET_KEY en cada build. No escriba secretos en vercel.json ni Git.
+
+ALLOWED_HOSTS lleva nombres sin esquema ni rutas; CSRF_TRUSTED_ORIGINS lleva
+orígenes con https://. Separe valores adicionales con comas. Para un dominio
+personalizado agregue su host y origen HTTPS a ambas variables. No habilite todos
+los subdominios vercel.app. Preview debe usar una base de datos separada, su propia
+clave y sus hosts explícitos; no comparta datos contables con previews de PR.
+TRUST_PROXY habilita el reconocimiento de HTTPS detrás del proxy de Vercel y evita
+bucles de redirección. Fuera de un proxy de confianza déjelo en false.
+
+### Estáticos y comprobación
+
+Vercel ejecuta `collectstatic` automáticamente cuando existe STATIC_ROOT y sirve
+/static/ desde su CDN. En producción se generan nombres con hash y compresión
+mediante WhiteNoise. No hacen falta rutas catch-all ni un servidor gunicorn.
+Para una comprobación local con las variables de producción cargadas de forma
+segura en el entorno (y no en un archivo versionado):
+
+```sh
+python manage.py check --deploy --fail-level WARNING
+python manage.py collectstatic --noinput
+```
+
+Compruebe que /ingresar/ responde 200 por HTTPS, / redirige al login, los enlaces
+CSS/JS generados responden 200 y el formulario de acceso admite un POST del mismo
+origen sin error CSRF. Nunca active DEBUG en el dominio público.
+
+### PostgreSQL, migraciones y datos existentes
+
+SQLite se permite solo en desarrollo. En producción los ajustes fallan si falta
+DATABASE_URL o apunta a SQLite: guardar un archivo en una función Vercel no es
+persistencia. PostgreSQL debe tener copias de seguridad automáticas externas y
+una política de recuperación verificada; guardar backups dentro de Vercel tampoco
+es persistencia. El comando backup_db requiere pg_dump para PostgreSQL y un destino
+durable fuera de la función.
+
+Ejecute las migraciones desde una máquina/CI de confianza con acceso al PostgreSQL
+correcto y las variables de producción cargadas, una vez por versión, antes de
+promover el deployment. No ejecute migrate en cada petición ni en builds paralelos:
+
+```sh
+python manage.py migrate --noinput
+# Solo para una instalación nueva sin datos importados:
+python manage.py initialize
+python manage.py createsuperuser
+```
+
+Si ya hay información en SQLite, no cree simplemente una base vacía. Detenga las
+escrituras, localice el archivo original que contiene los datos y haga una copia
+consistente con `python manage.py backup_db --directory /ruta/segura`. Si solo
+existía dentro de una función ya descartada, configurar PostgreSQL no recupera ese
+archivo: necesitará una copia previa. No suba SQLite ni sus exportaciones a Git.
+
+Ensaye la migración sobre una base PostgreSQL vacía y separada. Desde la copia
+SQLite local, con DEBUG=true y DATABASE_URL sin definir, exporte a un archivo
+privado (contiene datos contables y hashes de contraseñas):
+
+```sh
+umask 077
+python manage.py dumpdata --natural-foreign --natural-primary \
+  --exclude contenttypes --exclude auth.permission --exclude admin.logentry \
+  --output /ruta/segura/contabilidad.json
+```
+
+Después, con las variables de PostgreSQL del destino cargadas:
+
+```sh
+python manage.py migrate --noinput
+python manage.py loaddata /ruta/segura/contabilidad.json
+```
+
+Antes de reabrir escrituras compare usuarios, clientes, ventas, pagos, gastos,
+saldos y totales de reportes entre origen y destino; pruebe crear y consultar una
+operación. Haga un backup del destino y conserve el origen para recuperación.
+No ejecute initialize antes de importar una copia con sus propias categorías y
+medios de pago. Redépliegue y compruebe que los datos permanecen tras otro deploy.
