@@ -1,0 +1,63 @@
+{% extends 'ledger/base.html' %}{% load money ui %}
+{% block eyebrow %}{% if kind == 'clientes' %}Directorio{% elif kind == 'productos' %}Catálogo{% else %}Configuración{% endif %}{% endblock %}
+{% block subtitle %}{% if kind == 'clientes' %}Tus clientes, su información comercial y lo que deben.{% elif kind == 'productos' %}Precios, presentaciones y forma de venta de cada producto.{% elif kind == 'categorias' %}Organiza tus gastos para entender en qué se va el dinero.{% else %}Formas de pago para ventas, abonos y gastos.{% endif %}{% endblock %}
+{% block actions %}<a class="btn btn-primary" href="{% url 'catalog_new' kind %}">{% icon 'plus' 17 %} {% if kind == 'clientes' %}Nuevo cliente{% elif kind == 'productos' %}Nuevo producto{% elif kind == 'categorias' %}Nueva categoría{% else %}Nuevo medio de pago{% endif %}</a>{% endblock %}
+{% block content %}
+<section class="card table-card">
+  <div class="toolbar">
+    <div><h2 class="card-title">{{ title }}</h2><p class="card-sub">{{ objects|length }} registros · El historial se conserva al inactivar</p></div>
+    <form class="search"><span class="input-icon">{% icon 'search' 16 %}<input name="q" placeholder="Buscar por nombre{% if kind == 'clientes' %} o identificación{% elif kind == 'productos' %} o referencia{% endif %}…" value="{{ q }}"></span><button class="btn btn-ghost btn-sm">Buscar</button>{% if q %}<a class="btn btn-ghost btn-sm" href="?" title="Limpiar búsqueda">{% icon 'x' 15 %}</a>{% endif %}</form>
+  </div>
+
+{% if kind == 'clientes' %}
+  <div class="table-wrap">
+    <table class="tbl" data-sortable>
+      <thead><tr><th>Nombre</th><th>Identificación</th><th>Teléfono</th><th class="num">Saldo pendiente</th><th>Estado</th><th class="no-sort">Acciones</th></tr></thead>
+      <tbody>
+      {% for o in objects %}
+        <tr class="{% if not o.active %}is-muted{% endif %}">
+          <td><a class="cell-person" href="{% url 'customer_detail' o.pk %}"><span class="avatar avatar-sm">{{ o.name|first|upper }}</span><span><strong>{{ o.name }}</strong><small>{{ o.email }}</small></span></a></td>
+          <td>{{ o.identification|default:'—' }}</td>
+          <td>{% if o.phone %}<a class="tel" href="tel:{{ o.phone }}">{% icon 'phone' 14 %} {{ o.phone }}</a>{% else %}—{% endif %}</td>
+          <td class="num"><strong class="{% if o.balance > 0 %}text-honey{% endif %}">{{ o.balance|cop }}</strong></td>
+          <td>{% if o.active %}<span class="badge b-green">Activo</span>{% else %}<span class="badge b-neutral">Inactivo</span>{% endif %}</td>
+          <td><div class="row-actions"><a class="btn btn-ghost btn-xs" href="{% url 'catalog_edit' kind o.pk %}">{% icon 'edit' 14 %} Editar</a><a class="btn btn-soft btn-xs" href="{% url 'customer_detail' o.pk %}">Estado de cuenta {% icon 'arrow-right' 14 %}</a></div></td>
+        </tr>
+      {% empty %}
+        <tr class="empty-row"><td colspan="6"><div class="empty-state"><div class="empty-art">{% icon 'users' 26 %}</div><h3>Todo listo para comenzar</h3><p>Crea tu primer registro para empezar a trabajar.</p><a class="btn btn-soft btn-sm" href="{% url 'catalog_new' kind %}">{% icon 'plus' 15 %} Nuevo cliente</a></div></td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr><th colspan="3">TOTAL DEUDA DE LA CONSULTA</th><td class="num">{{ balance_total|cop }}</td><td colspan="2"></td></tr></tfoot>
+    </table>
+  </div>
+
+{% else %}
+  <div class="tile-grid {% if kind != 'productos' %}tile-grid-sm{% endif %}">
+  {% for o in objects %}
+    <article class="tile {% if not o.active %}is-muted{% endif %}">
+      <div class="tile-top">
+        <span class="tile-icon {% if kind == 'productos' %}t-berry{% elif kind == 'medios' %}{% if o.is_credit %}t-honey{% else %}t-green{% endif %}{% else %}t-green{% endif %}">{% if kind == 'productos' %}{% berry 26 %}{% elif kind == 'medios' %}{% if o.is_credit %}{% icon 'clock' 20 %}{% else %}{% icon 'card' 20 %}{% endif %}{% else %}{% icon 'tags' 20 %}{% endif %}</span>
+        {% if o.active %}<span class="badge b-green">Activo</span>{% else %}<span class="badge b-neutral">Inactivo</span>{% endif %}
+      </div>
+      <h3 class="tile-title">{{ o.name }}</h3>
+      {% if kind == 'productos' %}
+        <p class="tile-sub">{% icon 'hash' 13 %} {{ o.code|default:'Sin referencia' }}</p>
+        <div class="tile-price"><strong>{{ o.price|cop }}</strong><small>por {% if o.by_weight %}libra{% else %}{{ o.unit }}{% endif %}</small></div>
+        <div class="tile-tags">
+          <span class="pill">{% icon 'box' 13 %} {{ o.unit }}</span>
+          {% if o.by_weight %}<span class="pill pill-honey">{% icon 'scale' 13 %} {% if o.variable_weight %}Peso variable por venta{% else %}{{ o.weight|plain_number }} lb por presentación{% endif %}</span>{% else %}<span class="pill">Por unidades</span>{% endif %}
+        </div>
+      {% elif kind == 'medios' %}
+        <p class="tile-sub">{% if o.is_credit %}Crédito · solo ventas{% else %}Recaudo · ventas, abonos y gastos{% endif %}</p>
+      {% else %}
+        <p class="tile-sub">{{ o.description|default:'—' }}</p>
+      {% endif %}
+      <a class="btn btn-ghost btn-sm btn-block tile-action" href="{% url 'catalog_edit' kind o.pk %}">{% icon 'edit' 15 %} Editar</a>
+    </article>
+  {% empty %}
+    <div class="empty-state tile-empty"><div class="empty-art">{% if kind == 'productos' %}{% icon 'box' 26 %}{% elif kind == 'medios' %}{% icon 'card' 26 %}{% else %}{% icon 'tags' 26 %}{% endif %}</div><h3>Todo listo para comenzar</h3><p>Crea tu primer registro para empezar a trabajar.</p><a class="btn btn-soft btn-sm" href="{% url 'catalog_new' kind %}">{% icon 'plus' 15 %} Crear registro</a></div>
+  {% endfor %}
+  </div>
+{% endif %}
+</section>
+{% endblock %}

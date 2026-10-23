@@ -1,0 +1,5 @@
+{% extends 'ledger/base.html' %}{% load ui %}
+{% block doctitle %}Acceso restringido{% endblock %}{% block crumb %}Acceso restringido{% endblock %}{% block heading %}Acceso restringido{% endblock %}
+{% block eyebrow %}Permisos{% endblock %}{% block subtitle %}Tu usuario no tiene permiso para abrir esta sección.{% endblock %}
+{% block content %}<section class="card"><div class="empty-state big"><div class="empty-art warn">{% icon 'shield' 30 %}</div><h3>Esta sección no está disponible para tu usuario</h3><p>Pide al administrador del negocio que te asigne el permiso correspondiente.</p><a class="btn btn-primary btn-sm" href="/">{% icon 'home' 15 %} Volver al resumen</a></div></section>{% endblock %}
+{% block public %}<div class="error-page">{% berry 56 %}<h1>Acceso restringido</h1><p>No tienes permiso para abrir esta sección.</p><a class="btn btn-primary" href="/ingresar/">Ingresar</a></div>{% endblock %}

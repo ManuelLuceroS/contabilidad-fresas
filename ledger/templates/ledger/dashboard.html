@@ -1,0 +1,115 @@
+{% extends 'ledger/base.html' %}{% load money ui %}
+{% block eyebrow %}Panel general{% endblock %}
+{% block subtitle %}Una mirada clara a lo que pasa con tu negocio.{% endblock %}
+{% block actions %}<a class="btn btn-ghost" href="/abonos/nuevo/">{% icon 'coins' 17 %} Registrar abono</a><a class="btn btn-berry" href="/ventas/nueva/">{% icon 'plus' 17 %} Nueva venta</a>{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="seed-pattern" aria-hidden="true"></div>
+  <div class="hero-main">
+    <span class="hero-greet" data-greeting>Hola, {{ user.username }}</span>
+    <span class="hero-label">{{ metrics.1.0 }}</span>
+    <strong class="hero-value money" data-countup>{{ metrics.1.1|cop }}</strong>
+    <span class="hero-sub">Mes calendario actual</span>
+  </div>
+  <div class="hero-side">
+    <div class="hero-stat"><span>{% icon 'sparkle' 16 %} {{ metrics.0.0 }}</span><strong class="money">{{ metrics.0.1|cop }}</strong><small>Movimientos del día</small></div>
+    <div class="hero-actions">
+      <a href="/ventas/nueva/">{% icon 'cart' 18 %}<span>Vender</span></a>
+      <a href="/abonos/nuevo/">{% icon 'coins' 18 %}<span>Abonar</span></a>
+      <a href="/gastos/nuevo/">{% icon 'receipt' 18 %}<span>Gasto</span></a>
+      <a href="/reportes/">{% icon 'chart' 18 %}<span>Reporte</span></a>
+    </div>
+  </div>
+  <div class="hero-berry" aria-hidden="true">{% berry 150 %}</div>
+</section>
+
+<section class="kpis">
+  <article class="kpi">
+    <div class="kpi-top"><span class="kpi-icon t-berry">{% icon 'arrow-down-right' 18 %}</span><span class="kpi-label">{{ metrics.2.0 }}</span></div>
+    <strong class="kpi-value">{{ metrics.2.1|cop }}</strong><small class="kpi-foot">Movimientos del día</small>
+  </article>
+  <article class="kpi">
+    <div class="kpi-top"><span class="kpi-icon t-berry">{% icon 'receipt' 18 %}</span><span class="kpi-label">{{ metrics.3.0 }}</span></div>
+    <strong class="kpi-value">{{ metrics.3.1|cop }}</strong><small class="kpi-foot">Mes calendario actual</small>
+  </article>
+  <a class="kpi kpi-link" href="/cartera/">
+    <div class="kpi-top"><span class="kpi-icon t-honey">{% icon 'wallet' 18 %}</span><span class="kpi-label">{{ metrics.4.0 }}</span>{% icon 'arrow-up-right' 16 'kpi-go' %}</div>
+    <strong class="kpi-value">{{ metrics.4.1|cop }}</strong><small class="kpi-foot">Saldo actual de toda la cartera</small>
+  </a>
+  <article class="kpi">
+    <div class="kpi-top"><span class="kpi-icon t-green">{% icon 'coins' 18 %}</span><span class="kpi-label">{{ metrics.5.0 }}</span></div>
+    <strong class="kpi-value">{{ metrics.5.1|cop }}</strong><small class="kpi-foot">Recaudos en las fechas consultadas</small>
+  </article>
+</section>
+
+{% include 'ledger/filters.html' %}
+
+<div class="grid-2-1">
+  <section class="card">
+    <div class="card-head">
+      <div><h2 class="card-title">El pulso de tu negocio</h2><p class="card-sub">Ventas y gastos del periodo seleccionado</p></div>
+      <div class="legend"><span><i class="sw sw-sales"></i>Ventas</span><span><i class="sw sw-exp"></i>Gastos</span></div>
+    </div>
+    <div class="period-totals">
+      <div><small><i class="sw sw-sales"></i>Ventas del periodo</small><strong class="money">{{ period_sales|cop }}</strong></div>
+      <div><small><i class="sw sw-exp"></i>Gastos del periodo</small><strong class="money">{{ period_expenses|cop }}</strong></div>
+    </div>
+    {% if chart %}
+    <div class="colchart" data-colchart>
+      <div class="colchart-axis" aria-hidden="true"><span data-tick="4"></span><span data-tick="3"></span><span data-tick="2"></span><span data-tick="1"></span><span>0</span></div>
+      <div class="colchart-scroll">
+        <div class="colchart-plot" style="--n:{{ chart|length }}">
+          {% for item in chart %}
+          <div class="col-group" data-label="{{ item.label }}" data-sales="{{ item.sales|stringformat:'.2f' }}" data-expenses="{{ item.expenses|stringformat:'.2f' }}" data-sales-text="{{ item.sales|cop }}" data-expenses-text="{{ item.expenses|cop }}" tabindex="0" aria-label="{{ item.label }}: ventas {{ item.sales|cop }}, gastos {{ item.expenses|cop }}">
+            <div class="col-bars">
+              <span class="col col-sales" style="--h:{{ item.sw|stringformat:'.2f' }}%" title="Ventas: {{ item.sales|cop }}"></span>
+              <span class="col col-exp" style="--h:{{ item.ew|stringformat:'.2f' }}%" title="Gastos: {{ item.expenses|cop }}"></span>
+            </div>
+            <small class="col-label">{% if item.label|length > 7 %}{{ item.label|slice:':5' }}{% else %}{{ item.label }}{% endif %}</small>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <details class="data-table">
+      <summary>{% icon 'list' 15 %} Ver datos en tabla</summary>
+      <div class="table-wrap"><table class="tbl tbl-compact"><thead><tr><th>Fecha</th><th class="num">Ventas</th><th class="num">Gastos</th></tr></thead><tbody>{% for item in chart %}<tr><td>{{ item.label }}</td><td class="num">{{ item.sales|cop }}</td><td class="num">{{ item.expenses|cop }}</td></tr>{% endfor %}</tbody></table></div>
+    </details>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-art">{% icon 'chart' 28 %}</div>
+      <h3>Aquí empieza tu historia</h3>
+      <p>Las ventas y los gastos que registres aparecerán en este gráfico.</p>
+      <a class="btn btn-soft btn-sm" href="/ventas/nueva/">Registrar mi primera venta {% icon 'arrow-right' 15 %}</a>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div><h2 class="card-title">Cartera por recuperar</h2><p class="card-sub">Clientes con mayor saldo pendiente</p></div>
+      <span class="kpi-icon t-honey">{% icon 'clock' 18 %}</span>
+    </div>
+    <div class="rank-list">
+    {% for c in top %}
+      <a class="rank" href="/clientes/{{ c.pk }}/estado/">
+        <span class="rank-n">{{ forloop.counter }}</span>
+        <span class="avatar avatar-sm">{{ c.name|first|upper }}</span>
+        <div class="rank-body"><div class="rank-row"><strong>{{ c.name }}</strong><b class="money">{{ c.balance|cop }}</b></div>
+        <div class="meter"><span style="width:{% widthratio c.balance top.0.balance 100 %}%"></span></div></div>
+      </a>
+    {% empty %}
+      <div class="empty-state compact"><div class="empty-art ok">{% icon 'check' 26 %}</div><h3>Cuentas al día</h3><p>No hay saldos pendientes por cobrar.</p></div>
+    {% endfor %}
+    </div>
+    <a class="card-link" href="/cartera/">Ver toda la cartera {% icon 'arrow-right' 15 %}</a>
+  </section>
+</div>
+
+<div class="quick-grid">
+  <a class="quick" href="/clientes/"><span class="quick-icon t-green">{% icon 'users' 20 %}</span><div><strong>{{ active_customers }} clientes activos</strong><small>Relaciones que hacen crecer tu negocio</small></div>{% icon 'chevron-right' 18 'quick-go' %}</a>
+  <a class="quick" href="/productos/"><span class="quick-icon t-berry">{% icon 'box' 20 %}</span><div><strong>{{ active_products }} productos activos</strong><small>Tu catálogo, siempre a mano</small></div>{% icon 'chevron-right' 18 'quick-go' %}</a>
+  <a class="quick" href="/gastos/nuevo/"><span class="quick-icon t-honey">{% icon 'receipt' 20 %}</span><div><strong>Registrar un gasto</strong><small>No pierdas de vista tus salidas</small></div>{% icon 'chevron-right' 18 'quick-go' %}</a>
+</div>
+<p class="note">{% icon 'info' 15 %} Los abonos son recaudos de ventas existentes. Este panel no calcula utilidad ni saldo de caja.</p>
+{% endblock %}

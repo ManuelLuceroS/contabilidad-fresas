@@ -1,0 +1,56 @@
+{% extends 'ledger/base.html' %}{% load ui %}
+{% block eyebrow %}Comercial · Registro{% endblock %}
+{% block subtitle %}Registra una venta y deja que las cuentas se hagan solas.{% endblock %}
+{% block actions %}<a class="btn btn-ghost" href="/ventas/">{% icon 'arrow-left' 16 %} Volver a ventas</a>{% endblock %}
+{% block content %}{{ products|json_script:'products-data' }}{{ submitted|json_script:'submitted-data' }}
+<form method="post" id="sale-form" data-confirm="¿Registrar la venta? Una vez guardada conservará su historial financiero." data-confirm-title="Registrar venta">
+{% csrf_token %}<input type="hidden" name="token" value="{{ token }}"><input type="hidden" name="rows" id="sale-rows">
+<ol class="stepper" aria-label="Pasos de la venta">
+  <li data-step="customer"><span>1</span>Cliente</li>
+  <li data-step="products"><span>2</span>Productos</li>
+  <li data-step="payment"><span>3</span>Pago</li>
+</ol>
+<div class="sale-layout">
+  <div class="sale-main">
+    <section class="card pad">
+      <h2 class="step-title"><span class="step">1</span> ¿A quién le vendes?</h2>
+      <div class="customer-pick">
+        <label class="field field-grow"><span class="field-label">Cliente</span><span class="input-icon">{% icon 'user' 17 %}<select name="customer" required><option value="">Selecciona un cliente</option>{% for c in customers %}<option value="{{ c.pk }}">{{ c.name }}{% if c.identification %} · {{ c.identification }}{% endif %}</option>{% endfor %}</select></span></label>
+        <a class="btn btn-ghost" href="/clientes/nuevo/">{% icon 'plus' 16 %} Crear cliente</a>
+      </div>
+    </section>
+
+    <section class="card pad">
+      <div class="step-head"><h2 class="step-title"><span class="step">2</span> Productos de la venta</h2><span class="muted small">Busca o toca un producto para agregarlo</span></div>
+      <div class="product-search">
+        <label for="product-search" class="field-label">Buscar productos</label>
+        <span class="input-icon input-lg">{% icon 'search' 18 %}<input type="search" id="product-search" placeholder="Escribe fresa, un nombre o una referencia…" autocomplete="off" aria-controls="product-results"></span>
+        <div id="product-results" class="product-results" aria-live="polite"><p class="muted">Escribe para encontrar un producto y agregarlo a la venta.</p></div>
+      </div>
+      <div id="sale-lines" class="sale-lines"><div class="empty-state compact" id="sale-empty"><div class="empty-art">{% icon 'cart' 26 %}</div><h3>Tu venta empieza aquí</h3><p>Agrega productos para calcular el total.</p></div></div>
+      <div class="draft-totals"><strong>TOTAL DE LA VENTA</strong><span>{% icon 'box' 15 %} Cantidad: <b id="draft-quantity">0</b></span><span>{% icon 'scale' 15 %} Libras: <b id="draft-weight">0</b></span><strong id="draft-total" class="money">$ 0,00</strong></div>
+    </section>
+  </div>
+
+  <aside class="sale-summary">
+    <div class="ticket">
+      <div class="ticket-head">
+        <h2><span class="step step-light">3</span> Resumen de la venta</h2>
+        <div class="summary-total"><small>Total a cobrar</small><strong id="grand-total" class="money">$ 0</strong></div>
+      </div>
+      <div class="ticket-body">
+        <label class="field"><span class="field-label">Condición / medio de la venta</span><span class="input-icon">{% icon 'card' 17 %}<select name="method" id="sale-method" required><option value="">Selecciona una opción</option>{% for m in methods %}<option value="{{ m.pk }}" data-credit="{{ m.is_credit|yesno:'true,false' }}">{{ m.name }}</option>{% endfor %}</select></span></label>
+        <div class="field"><div class="field-label-row"><label class="field-label" for="initial-payment">Pago inicial recibido (COP)</label><button type="button" class="link-btn" data-fill-total>Pago completo</button></div><span class="input-icon">{% icon 'banknote' 17 %}<input type="number" name="initial" id="initial-payment" value="0" min="0" step="0.01" required inputmode="decimal"></span></div>
+        <label class="field" id="cash-method-label" hidden><span class="field-label">Medio del pago inicial</span><span class="input-icon">{% icon 'coins' 17 %}<select name="cash_method"><option value="">Selecciona una opción</option>{% for m in cash_methods %}<option value="{{ m.pk }}">{{ m.name }}</option>{% endfor %}</select></span></label>
+        <div class="balance-row"><span>Saldo pendiente</span><strong id="sale-balance" class="money">$ 0</strong></div>
+        <p class="muted small">El saldo pendiente se registrará automáticamente en la cuenta del cliente.</p>
+        <p id="sale-error" class="inline-error" role="alert"></p>
+        <button class="btn btn-berry btn-lg btn-block">Registrar venta {% icon 'arrow-right' 18 %}</button>
+        <a href="/ventas/" class="cancel-link">Cancelar</a>
+      </div>
+      <small class="ticket-foot">{% icon 'shield' 13 %} Comprobante de uso interno. No es factura electrónica DIAN.</small>
+    </div>
+  </aside>
+</div>
+</form>
+{% endblock %}

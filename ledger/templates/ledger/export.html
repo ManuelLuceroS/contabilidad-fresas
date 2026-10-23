@@ -1,0 +1,5 @@
+{% load ui %}<div class="export-actions no-print" role="group" aria-label="Exportar">
+  <button type="button" class="btn btn-ghost btn-sm" data-print>{% icon 'printer' 16 %}<span>Imprimir</span></button>
+  <a href="?{{ request.GET.urlencode }}&export=csv" class="btn btn-ghost btn-sm">{% icon 'sheet' 16 %}<span>CSV / Excel</span></a>
+  <a href="?{{ request.GET.urlencode }}&export=pdf" class="btn btn-soft btn-sm">{% icon 'download' 16 %}<span>PDF</span></a>
+</div>

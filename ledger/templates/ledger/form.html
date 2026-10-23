@@ -1,0 +1,63 @@
+{% extends 'ledger/base.html' %}{% load ui %}
+{% block eyebrow %}{% if back == '/gastos/' %}Egresos{% elif back == '/clientes/' %}Directorio{% elif back == '/productos/' %}Catálogo{% else %}Configuración{% endif %} · Formulario{% endblock %}
+{% block subtitle %}Completa la información y guarda. Los campos marcados como opcionales pueden quedar vacíos.{% endblock %}
+{% block actions %}<a class="btn btn-ghost" href="{{ back }}">{% icon 'arrow-left' 16 %} Volver</a>{% endblock %}
+{% block content %}
+<div class="form-layout">
+  <section class="card pad form-card">
+    <div class="form-card-head">
+      <span class="tile-icon {% if back == '/gastos/' %}t-berry{% elif back == '/productos/' %}t-berry{% else %}t-green{% endif %}">{% if back == '/gastos/' %}{% icon 'receipt' 20 %}{% elif back == '/clientes/' %}{% icon 'user' 20 %}{% elif back == '/productos/' %}{% berry 24 %}{% elif back == '/medios/' %}{% icon 'card' 20 %}{% else %}{% icon 'tags' 20 %}{% endif %}</span>
+      <div><h2 class="card-title">{{ title }}</h2><p class="card-sub">Información del registro</p></div>
+    </div>
+    <form method="post" data-confirm="¿Guardar este registro?" data-confirm-title="Guardar cambios">
+      {% csrf_token %}{% if token %}<input type="hidden" name="token" value="{{ token }}">{% endif %}
+      {% if form.non_field_errors %}<div class="alert error" role="alert">{% icon 'alert' 18 %}<div>{{ form.non_field_errors }}</div></div>{% endif %}
+      <div class="form-grid">
+      {% for field in form %}
+        {% if field.is_hidden %}{{ field }}
+        {% elif field.field.widget.input_type == 'checkbox' %}
+          <div data-field="{{ field.name }}" class="field wide">
+            <label class="switch-row" for="{{ field.id_for_label }}">
+              {{ field }}<span class="switch" aria-hidden="true"></span>
+              <span class="switch-text"><strong>{{ field.label }}</strong>{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}</span>
+            </label>
+            {{ field.errors }}
+          </div>
+        {% else %}
+          <div data-field="{{ field.name }}" class="field {% if field.name == 'description' or field.name == 'notes' or field.name == 'address' %}wide{% endif %}{% if field.errors %} has-error{% endif %}">
+            <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %}<small> · Opcional</small>{% endif %}</label>
+            {{ field }}
+            {{ field.errors }}
+            {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
+      </div>
+      <div class="form-footer">
+        <a class="btn btn-ghost" href="{{ back }}">Cancelar</a>
+        <button class="btn btn-primary">{% icon 'check' 16 %} Guardar registro</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="form-aside">
+    <div class="help-card">
+      <span class="empty-art ok">{% icon 'shield' 22 %}</span>
+      <h3>Información que permanece</h3>
+      <p>Los cambios se guardan en la base de datos de tu negocio.</p>
+      <p>Inactiva un registro cuando dejes de usarlo. Sus movimientos anteriores conservarán el historial.</p>
+    </div>
+    {% if history %}
+    <div class="card pad">
+      <h3 class="section-title">{% icon 'history' 17 %} Historial de modificaciones</h3>
+      <ol class="timeline">
+      {% for a in history %}
+        <li><details><summary><span class="tl-dot"></span><span><strong>{{ a.action }}</strong><small>{{ a.date|date:'d/m/Y H:i' }} · {{ a.actor }}</small></span></summary><p>{{ a.action }}</p><pre>Antes: {{ a.before }}
+Después: {{ a.after }}</pre></details></li>
+      {% endfor %}
+      </ol>
+    </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% load ui %}<form class="filters card no-print" method="get" data-filters>
+  <div class="filters-head">{% icon 'filter' 16 %}<span>Filtrar periodo</span>
+    <div class="chips" role="group" aria-label="Periodos rápidos">
+      <button type="button" class="chip" data-period="today">Hoy</button>
+      <button type="button" class="chip" data-period="week">Esta semana</button>
+      <button type="button" class="chip" data-period="month">Este mes</button>
+      <button type="button" class="chip" data-period="year">Este año</button>
+    </div>
+  </div>
+  <div class="filters-row">
+    <label class="field"><span class="field-label">Desde</span><span class="input-icon">{% icon 'calendar' 16 %}<input type="date" name="start" value="{{ start|date:'Y-m-d' }}"></span></label>
+    <label class="field"><span class="field-label">Hasta</span><span class="input-icon">{% icon 'calendar' 16 %}<input type="date" name="end" value="{{ end|date:'Y-m-d' }}"></span></label>
+    {% if customers %}<label class="field field-grow"><span class="field-label">Cliente</span><span class="input-icon">{% icon 'user' 16 %}<select name="customer"><option value="">Todos los clientes</option>{% for c in customers %}<option value="{{ c.pk }}" {% if request.GET.customer == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></span></label>{% endif %}
+    {% if categories %}<label class="field field-grow"><span class="field-label">Categoría</span><span class="input-icon">{% icon 'tags' 16 %}<select name="category"><option value="">Todas las categorías</option>{% for c in categories %}<option value="{{ c.pk }}" {% if request.GET.category == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></span></label>
+    <label class="field field-grow"><span class="field-label">Buscar</span><span class="input-icon">{% icon 'search' 16 %}<input name="q" value="{{ request.GET.q }}" placeholder="Descripción o referencia"></span></label>{% endif %}
+    <div class="filters-actions">
+      <button class="btn btn-primary">{% icon 'search' 16 %} Consultar</button>
+      <a class="btn btn-ghost" href="{{ request.path }}" title="Restablecer filtros">{% icon 'reset' 16 %}<span class="hide-sm">Restablecer</span></a>
+    </div>
+  </div>
+</form>

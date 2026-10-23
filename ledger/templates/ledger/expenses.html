@@ -1,0 +1,49 @@
+{% extends 'ledger/base.html' %}{% load money ui %}
+{% block eyebrow %}Egresos{% endblock %}
+{% block subtitle %}Registra tus salidas de dinero y descubre en qué categorías se concentran.{% endblock %}
+{% block actions %}<a class="btn btn-ghost" href="/categorias/">{% icon 'tags' 16 %} Categorías</a><a class="btn btn-primary" href="/gastos/nuevo/">{% icon 'plus' 17 %} Registrar gasto</a>{% endblock %}
+{% block content %}
+{% include 'ledger/filters.html' %}
+
+<div class="grid-1-2">
+  <section class="expense-hero">
+    <div class="seed-pattern" aria-hidden="true"></div>
+    <span class="kpi-icon t-glass">{% icon 'receipt' 20 %}</span>
+    <span class="hero-label">Gastos del periodo</span>
+    <strong class="hero-value money">{{ total|cop }}</strong>
+    <div class="expense-meta"><span>{% icon 'list' 15 %} {{ expenses|length }} registros en la consulta</span><span>{% icon 'tags' 15 %} {{ groups|length }} categorías</span></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><h2 class="card-title">Total por categoría</h2><p class="card-sub">Distribución del gasto en el periodo</p></div></div>
+    <div class="bar-list">
+    {% for name,value in groups.items %}
+      <div class="bar-item">
+        <div class="bar-row"><span class="bar-name">{{ name }}</span><span><strong class="money">{{ value|cop }}</strong> <small class="muted">{% widthratio value total 100 %}%</small></span></div>
+        <div class="meter meter-berry"><span style="width:{% widthratio value total 100 %}%"></span></div>
+      </div>
+    {% empty %}
+      <p class="muted center">Sin gastos en el periodo.</p>
+    {% endfor %}
+    </div>
+    <div class="sum-row"><strong>TOTAL GASTOS</strong><strong class="money">{{ total|cop }}</strong></div>
+  </section>
+</div>
+
+<section class="card table-card">
+  <div class="toolbar"><div><h2 class="card-title">Historial de gastos</h2><p class="card-sub">Cada edición queda registrada con su antes y después</p></div>{% include 'ledger/export.html' %}</div>
+  <div class="table-wrap">
+    <table class="tbl" data-sortable>
+      <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th class="num">Valor</th><th>Medio de pago</th><th>Referencia</th><th class="no-sort"></th></tr></thead>
+      <tbody>
+      {% for e in expenses %}
+        <tr><td class="nowrap">{{ e.date|date:'d/m/Y' }}</td><td><span class="badge b-berry">{{ e.category.name }}</span></td><td>{{ e.description|default:'—' }}</td><td class="num"><strong>{{ e.amount|cop }}</strong></td><td>{{ e.method.name }}</td><td>{{ e.reference|default:'—' }}</td><td><a class="btn btn-ghost btn-xs" href="/gastos/{{ e.pk }}/editar/">{% icon 'edit' 14 %} Editar / historial</a></td></tr>
+      {% empty %}
+        <tr class="empty-row"><td colspan="7"><div class="empty-state"><div class="empty-art">{% icon 'receipt' 26 %}</div><h3>No hay gastos en este periodo</h3><p>Registra tus gastos para mantener el control.</p><a class="btn btn-soft btn-sm" href="/gastos/nuevo/">{% icon 'plus' 15 %} Registrar gasto</a></div></td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr><th colspan="3">TOTAL GASTOS DEL PERIODO</th><td class="num">{{ total|cop }}</td><td colspan="3"></td></tr></tfoot>
+    </table>
+  </div>
+</section>
+{% endblock %}

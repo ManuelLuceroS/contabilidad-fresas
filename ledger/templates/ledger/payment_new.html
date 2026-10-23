@@ -1,0 +1,64 @@
+{% extends 'ledger/base.html' %}{% load money ui %}
+{% block eyebrow %}Cartera · Recaudo{% endblock %}
+{% block subtitle %}Registra lo que te pagan y se aplica solo, de la deuda más antigua a la más nueva.{% endblock %}
+{% block actions %}<a class="btn btn-ghost" href="/cartera/">{% icon 'arrow-left' 16 %} Volver a cartera</a>{% endblock %}
+{% block content %}
+<section class="card pad">
+  <form method="get" class="customer-pick">
+    <label class="field field-grow"><span class="field-label">Cliente</span><span class="input-icon">{% icon 'user' 17 %}<select name="customer" required data-autosubmit><option value="">Selecciona un cliente</option>{% for c in customers %}<option value="{{ c.pk }}" {% if c.pk == customer.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></span></label>
+    <button class="btn btn-ghost">{% icon 'search' 16 %} Consultar deudas</button>
+  </form>
+</section>
+
+{% if customer %}
+<form method="post" id="payment-form" data-balance="{{ customer.balance|stringformat:'.2f' }}" data-confirm="¿Registrar este abono y aplicarlo a las ventas más antiguas?" data-confirm-title="Registrar abono">
+{% csrf_token %}
+<input type="hidden" name="customer" value="{{ customer.pk }}"><input type="hidden" name="token" value="{{ token }}">
+<div class="pay-layout">
+  <div class="pay-main">
+    <section class="card pad">
+      <div class="pay-customer">
+        <span class="avatar avatar-lg">{{ customer.name|first|upper }}</span>
+        <div><small class="muted">Abono de</small><h2>{{ customer.name }}</h2><a class="text-link" href="/clientes/{{ customer.pk }}/estado/">Ver estado de cuenta {% icon 'arrow-right' 14 %}</a></div>
+      </div>
+      <div class="form-grid">
+        <label class="field"><span class="field-label">Fecha del abono</span><span class="input-icon">{% icon 'calendar' 17 %}<input type="date" name="date" required value="{% if submitted.date %}{{ submitted.date }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}" max="{{ today|date:'Y-m-d' }}"></span></label>
+        <label class="field"><span class="field-label">Valor recibido (COP)</span><span class="input-icon">{% icon 'banknote' 17 %}<input type="number" name="amount" min="0.01" step="0.01" max="{{ customer.balance|stringformat:'.2f' }}" value="{{ submitted.amount }}" required inputmode="decimal" placeholder="0"></span></label>
+        <label class="field"><span class="field-label">Medio de pago</span><span class="input-icon">{% icon 'card' 17 %}<select name="method" required><option value="">Selecciona una opción</option>{% for m in methods %}<option value="{{ m.pk }}" {% if submitted.method == m.pk|stringformat:'s' %}selected{% endif %}>{{ m.name }}</option>{% endfor %}</select></span></label>
+        <label class="field wide"><span class="field-label">Observaciones <small>· Opcional</small></span><textarea name="notes" rows="2" placeholder="Ej.: abono entregado en bodega">{{ submitted.notes }}</textarea></label>
+      </div>
+    </section>
+
+    <section class="card table-card">
+      <div class="toolbar"><div><h2 class="card-title">Aplicación a las ventas pendientes</h2><p class="card-sub">El abono se aplica automáticamente desde la venta más antigua hasta la más nueva. El comprobante conservará esta distribución.</p></div><span class="badge b-green">{% icon 'layers' 13 %} Orden automático</span></div>
+      <div class="table-wrap">
+        <table class="tbl">
+          <thead><tr><th>Venta</th><th>Fecha</th><th class="num">Deuda pendiente</th><th class="num">Abono a aplicar</th><th class="num">Saldo después</th><th>Cobertura</th></tr></thead>
+          <tbody>{% for s in debts %}<tr data-debt="{{ s.balance|stringformat:'.2f' }}" data-date="{{ s.occurred_at|date:'Y-m-d' }}"><td><a class="ref" href="/ventas/{{ s.pk }}/">{{ s }}</a></td><td>{{ s.occurred_at|date:'d/m/Y' }}</td><td class="num">{{ s.balance|cop }}</td><td class="num text-green" data-applied>{{ 0|cop }}</td><td class="num" data-after>{{ s.balance|cop }}</td><td><div class="meter meter-green meter-sm"><span data-cover style="width:0%"></span></div></td></tr>{% empty %}<tr class="empty-row"><td colspan="6"><div class="empty-state compact"><div class="empty-art ok">{% icon 'check' 24 %}</div><h3>Sin deudas</h3><p>Este cliente no tiene deudas pendientes.</p></div></td></tr>{% endfor %}</tbody>
+          <tfoot><tr><th colspan="2">TOTALES</th><td class="num">{{ debt_total|cop }}</td><td class="num" id="payment-total-applied">{{ 0|cop }}</td><td class="num" id="payment-total-after">{{ debt_total|cop }}</td><td></td></tr></tfoot>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <aside class="pay-side">
+    <div class="ticket">
+      <div class="ticket-head">
+        <h2>{% icon 'wallet' 18 %} Resumen del abono</h2>
+        <div class="summary-total"><small>Deuda total pendiente</small><strong class="money">{{ customer.balance|cop }}</strong></div>
+      </div>
+      <div class="ticket-body">
+        <div class="payment-remaining balance-row"><span>Deuda después del abono</span><strong id="payment-remaining" class="money">{{ customer.balance|cop }}</strong></div>
+        <p id="payment-preview-error" class="inline-error" role="alert"></p>
+        <button class="btn btn-primary btn-lg btn-block" {% if not debts %}disabled{% endif %}>Registrar abono</button>
+        <a class="cancel-link" href="/cartera/">Cancelar</a>
+      </div>
+      <small class="ticket-foot">{% icon 'info' 13 %} Un abono es un recaudo de ventas existentes; no crea una venta nueva.</small>
+    </div>
+  </aside>
+</div>
+</form>
+{% else %}
+<section class="card"><div class="empty-state"><div class="empty-art">{% icon 'wallet' 28 %}</div><h3>Selecciona un cliente</h3><p>Consulta su deuda para registrar un abono.</p></div></section>
+{% endif %}
+{% endblock %}

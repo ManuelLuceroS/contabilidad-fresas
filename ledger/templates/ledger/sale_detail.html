@@ -1,0 +1,54 @@
+{% extends 'ledger/base.html' %}{% load money ui %}
+{% block eyebrow %}Comercial · Comprobante{% endblock %}
+{% block subtitle %}Comprobante de venta interno · Historial conservado{% endblock %}
+{% block actions %}<div class="export-actions no-print"><a class="btn btn-ghost" href="/ventas/">{% icon 'arrow-left' 16 %} Ventas</a><button class="btn btn-ghost" data-print>{% icon 'printer' 16 %} Imprimir</button><a class="btn btn-primary" href="?export=pdf">{% icon 'download' 16 %} Descargar PDF</a></div>{% endblock %}
+{% block content %}
+<section class="receipt">
+  <div class="receipt-band">
+    <div class="receipt-brand">{% berry 30 %}<div><strong>Mi Contabilidad</strong><small>COMPROBANTE DE VENTA INTERNO</small></div></div>
+    <div class="receipt-no"><small>Número</small><h2>{{ sale }}</h2><span>{% icon 'calendar' 14 %} {{ sale.occurred_at|date:'d/m/Y H:i' }}</span></div>
+  </div>
+
+  <div class="receipt-parties">
+    <div class="party">
+      <span class="avatar avatar-lg">{{ sale.customer_name|first|upper }}</span>
+      <div><small>Cliente</small><h3>{{ sale.customer_name }}</h3><p>{% icon 'id' 14 %} {{ sale.customer_identification|default:'Sin identificación registrada' }}</p></div>
+    </div>
+    <div class="party-meta">
+      <div><small>Condición de la venta</small><strong>{{ sale.method_name }}</strong></div>
+      <div><small>Registró</small><strong>{{ sale.created_by }}</strong></div>
+      <div><small>Estado</small>{% if sale.balance > 0 %}<span class="badge b-honey">{% icon 'clock' 13 %} Saldo pendiente</span>{% else %}<span class="badge b-green">{% icon 'check' 13 %} Pagada</span>{% endif %}</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead><tr><th>Producto / presentación</th><th class="num">Cantidad</th><th class="num">Peso / presentación</th><th class="num">Peso total</th><th class="num">Precio</th><th class="num">Subtotal</th></tr></thead>
+      <tbody>{% for l in sale.lines.all %}<tr><td><span class="cell-product"><span class="dot-berry"></span><span><strong>{{ l.name }}</strong><small>{{ l.unit }}</small></span></span></td><td class="num">{{ l.quantity|plain_number }}</td><td class="num">{% if l.by_weight %}{{ l.weight|plain_number }} lb{% else %}—{% endif %}</td><td class="num">{% if l.by_weight %}{{ l.total_weight|floatformat:'-6' }} lb{% else %}—{% endif %}</td><td class="num">{{ l.price|cop }}<small>por {% if l.by_weight %}libra{% else %}{{ l.unit }}{% endif %}</small></td><td class="num"><strong>{{ l.subtotal|cop }}</strong></td></tr>{% endfor %}</tbody>
+      <tfoot><tr><th>TOTAL VENDIDO</th><td class="num">{{ totals.quantity|plain_number }}</td><td></td><td class="num">{{ totals.weight|plain_number }} lb</td><td></td><td class="num">{{ sale.total|cop }}</td></tr></tfoot>
+    </table>
+  </div>
+
+  <div class="receipt-grid">
+    <div class="receipt-pay">
+      <h3 class="section-title">{% icon 'coins' 17 %} Pagos aplicados</h3>
+      <div class="table-wrap">
+        <table class="tbl tbl-compact">
+          <thead><tr><th>Comprobante</th><th>Fecha</th><th>Medio</th><th class="num">Valor abonado</th></tr></thead>
+          <tbody>{% for a in sale.allocations.all %}<tr><td><a class="ref" href="/abonos/{{ a.payment_id }}/">{{ a.payment }}</a></td><td>{{ a.payment.date|date:'d/m/Y' }}</td><td><span class="badge b-neutral">{{ a.payment.method_name }}</span></td><td class="num">{{ a.amount|cop }}</td></tr>{% empty %}<tr class="empty-row"><td colspan="4"><p class="muted center">Esta venta aún no tiene pagos.</p></td></tr>{% endfor %}</tbody>
+          <tfoot><tr><th colspan="3">TOTAL ABONADO</th><td class="num">{{ sale.paid|cop }}</td></tr><tr><th colspan="3">DEUDA PENDIENTE</th><td class="num">{{ sale.balance|cop }}</td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="receipt-totals">
+      <p><span>Total de la venta</span><strong>{{ sale.total|cop }}</strong></p>
+      <p><span>Pago inicial</span><strong>{{ sale.initial_payment|cop }}</strong></p>
+      <p><span>Total abonado</span><strong>{{ sale.paid|cop }}</strong></p>
+      <div class="meter meter-green meter-lg" title="Pagado"><span style="width:{% if sale.total %}{% widthratio sale.paid sale.total 100 %}{% else %}100{% endif %}%"></span></div>
+      <p class="highlight"><span>Saldo pendiente actual</span><strong>{{ sale.balance|cop }}</strong></p>
+      {% if sale.balance > 0 %}<a class="btn btn-primary btn-block no-print" href="/abonos/nuevo/?customer={{ sale.customer_id }}">{% icon 'coins' 16 %} Registrar abono</a>{% endif %}
+    </div>
+  </div>
+  <p class="internal-note">{% icon 'shield' 14 %} Documento de uso interno. No corresponde a una factura electrónica validada por la DIAN.</p>
+</section>
+{% endblock %}

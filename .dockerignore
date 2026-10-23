@@ -1,0 +1,10 @@
+.venv
+.env
+.dev-secret
+.git
+*.sqlite3
+*.sqlite3-*
+backups
+tmp
+staticfiles
+__pycache__

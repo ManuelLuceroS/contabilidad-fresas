@@ -1,0 +1,5 @@
+{% extends 'ledger/base.html' %}{% load ui %}
+{% block doctitle %}Página no encontrada{% endblock %}{% block crumb %}No encontrada{% endblock %}{% block heading %}Página no encontrada{% endblock %}
+{% block eyebrow %}Error 404{% endblock %}{% block subtitle %}La dirección no existe o el registro ya no está disponible.{% endblock %}
+{% block content %}<section class="card"><div class="empty-state big"><div class="empty-art">{% icon 'search' 30 %}</div><h3>No encontramos lo que buscabas</h3><p>Revisa la dirección o vuelve al resumen de tu negocio.</p><a class="btn btn-primary btn-sm" href="/">{% icon 'home' 15 %} Volver al resumen</a></div></section>{% endblock %}
+{% block public %}<div class="error-page">{% berry 56 %}<h1>Página no encontrada</h1><p>La dirección no existe.</p><a class="btn btn-primary" href="/">Ir al inicio</a></div>{% endblock %}

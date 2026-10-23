@@ -1,0 +1,69 @@
+{% extends 'ledger/base.html' %}{% load money ui %}
+{% block eyebrow %}Clientes · Estado de cuenta{% endblock %}
+{% block subtitle %}Estado de cuenta individual · {{ customer.identification|default:'Sin identificación' }} · {{ customer.phone }}{% endblock %}
+{% block actions %}<a class="btn btn-ghost" href="{% url 'catalog_edit' 'clientes' customer.pk %}">{% icon 'edit' 16 %} Editar</a><a class="btn btn-primary" href="/abonos/nuevo/?customer={{ customer.pk }}">{% icon 'plus' 17 %} Registrar abono</a>{% endblock %}
+{% block content %}
+<section class="profile card">
+  <div class="profile-id">
+    <span class="avatar avatar-xl">{{ customer.name|first|upper }}</span>
+    <div>
+      <h2>{{ customer.name }}</h2>
+      {% if customer.active %}<span class="badge b-green">{% icon 'check' 13 %} Activo</span>{% else %}<span class="badge b-neutral">Inactivo</span>{% endif %}
+      <span class="muted small">Cliente desde {{ customer.created_at|date:'d/m/Y' }}</span>
+    </div>
+  </div>
+  <ul class="profile-facts">
+    <li>{% icon 'id' 16 %}<div><small>Identificación</small><span>{{ customer.identification|default:'—' }}</span></div></li>
+    <li>{% icon 'phone' 16 %}<div><small>Teléfono</small><span>{{ customer.phone|default:'—' }}</span></div></li>
+    <li>{% icon 'mail' 16 %}<div><small>Correo</small><span>{{ customer.email|default:'—' }}</span></div></li>
+    <li>{% icon 'pin' 16 %}<div><small>Dirección</small><span>{{ customer.address|default:'—' }}</span></div></li>
+  </ul>
+  {% if customer.notes %}<div class="notes-box">{% icon 'edit' 15 %}<p>{{ customer.notes }}</p></div>{% endif %}
+</section>
+
+{% include 'ledger/filters.html' %}
+
+<section class="kpis kpis-3">
+  <article class="kpi"><div class="kpi-top"><span class="kpi-icon t-ink">{% icon 'history' 18 %}</span><span class="kpi-label">Saldo inicial del periodo</span></div><strong class="kpi-value">{{ opening|cop }}</strong></article>
+  <article class="kpi"><div class="kpi-top"><span class="kpi-icon t-green">{% icon 'calendar' 18 %}</span><span class="kpi-label">Saldo al cierre del periodo</span></div><strong class="kpi-value">{{ closing|cop }}</strong></article>
+  <article class="kpi kpi-feature-honey"><div class="kpi-top"><span class="kpi-icon t-honey">{% icon 'wallet' 18 %}</span><span class="kpi-label">Saldo pendiente actual</span></div><strong class="kpi-value">{{ customer.balance|cop }}</strong></article>
+</section>
+
+<section class="card table-card">
+  <div class="toolbar">
+    <div><h2 class="card-title">Movimientos de la cuenta</h2><p class="card-sub">Generado: {% now 'd/m/Y H:i' %} · {{ start|date:'d/m/Y'|default:'Desde el inicio' }} a {{ end|date:'d/m/Y'|default:'Hoy' }}</p></div>
+    {% include 'ledger/export.html' %}
+  </div>
+  <div class="table-wrap">
+    <table class="tbl" id="statement">
+      <thead><tr><th>Fecha</th><th>Referencia</th><th>Descripción</th><th class="num">Ventas</th><th class="num">Abonos</th><th class="num">Saldo acumulado</th></tr></thead>
+      <tbody>{% for e in events %}<tr><td>{{ e.date|date:'d/m/Y' }}</td><td><span class="ref">{{ e.reference }}</span></td><td><span class="badge {% if e.debit %}b-honey{% else %}b-green{% endif %}">{% if e.debit %}{% icon 'arrow-up-right' 13 %}{% else %}{% icon 'arrow-down-right' 13 %}{% endif %} {{ e.description }}</span></td><td class="num">{% if e.debit %}{{ e.debit|cop }}{% else %}—{% endif %}</td><td class="num text-green">{% if e.credit %}{{ e.credit|cop }}{% else %}—{% endif %}</td><td class="num"><strong>{{ e.balance|cop }}</strong></td></tr>{% empty %}<tr class="empty-row"><td colspan="6"><div class="empty-state compact"><div class="empty-art">{% icon 'history' 24 %}</div><h3>Sin movimientos</h3><p>No hay movimientos en este periodo.</p></div></td></tr>{% endfor %}</tbody>
+      <tfoot><tr><th colspan="3">TOTALES DEL PERIODO / SALDO FINAL</th><td class="num">{{ period_sales|cop }}</td><td class="num">{{ period_payments|cop }}</td><td class="num">{{ closing|cop }}</td></tr></tfoot>
+    </table>
+  </div>
+  <div class="equation"><span><small>Saldo inicial</small>{{ opening|cop }}</span><i>+</i><span><small>Ventas</small>{{ period_sales|cop }}</span><i>−</i><span><small>Abonos</small>{{ period_payments|cop }}</span><i>=</i><span class="eq-result"><small>Saldo final</small><strong>{{ closing|cop }}</strong></span></div>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><div><h2 class="card-title">Historial completo de ventas</h2><p class="card-sub">Todas las ventas de este cliente</p></div><span class="kpi-icon t-green">{% icon 'sales' 18 %}</span></div>
+    <div class="history-list">
+    {% for s in sales %}<a class="history-item" href="/ventas/{{ s.pk }}/"><span class="hi-icon t-green">{% icon 'cart' 16 %}</span><div><strong>{{ s }}</strong><small>{{ s.occurred_at|date:'d/m/Y' }}</small></div><div class="hi-amount"><strong>{{ s.total|cop }}</strong>{% if s.balance > 0 %}<small class="text-honey">Saldo {{ s.balance|cop }}</small>{% else %}<small class="text-green">Saldo {{ s.balance|cop }}</small>{% endif %}</div></a>{% empty %}<p class="muted center">Sin ventas.</p>{% endfor %}
+    </div>
+    <div class="sum-row"><strong>TOTAL VENDIDO</strong><span><strong class="money">{{ history_sold|cop }}</strong><small>Deuda {{ history_balance|cop }}</small></span></div>
+  </section>
+  <section class="card">
+    <div class="card-head"><div><h2 class="card-title">Historial completo de abonos</h2><p class="card-sub">Pagos iniciales y abonos posteriores</p></div><span class="kpi-icon t-honey">{% icon 'coins' 18 %}</span></div>
+    <div class="history-list">
+    {% for p in payments %}<a class="history-item" href="/abonos/{{ p.pk }}/"><span class="hi-icon t-honey">{% icon 'coins' 16 %}</span><div><strong>{{ p }}</strong><small>{{ p.date|date:'d/m/Y' }} · {{ p.created_by }}</small></div><div class="hi-amount"><strong>{{ p.amount|cop }}</strong></div></a>{% empty %}<p class="muted center">Sin abonos.</p>{% endfor %}
+    </div>
+    <div class="sum-row"><strong>TOTAL ABONADO</strong><strong class="money">{{ history_received|cop }}</strong></div>
+  </section>
+</div>
+
+<section class="summary-strip">
+  <div><small>Total vendido histórico</small><strong>{{ history_sold|cop }}</strong></div>
+  <div><small>Total abonado histórico</small><strong>{{ history_received|cop }}</strong></div>
+  <div class="ss-accent"><small>Deuda actual</small><strong>{{ history_balance|cop }}</strong></div>
+</section>
+{% endblock %}

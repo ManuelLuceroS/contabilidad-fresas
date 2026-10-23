@@ -1,0 +1,44 @@
+{% extends 'ledger/base.html' %}{% load ui %}{% block public %}
+<div class="login">
+  <section class="login-story" aria-hidden="false">
+    <div class="seed-pattern" aria-hidden="true"></div>
+    <a class="login-brand" href="/">{% berry 34 %}<span>Mi Contabilidad<small>Ventas y distribución</small></span></a>
+    <div class="login-pitch">
+      <span class="eyebrow eyebrow-light">Menos cuentas sueltas. Más claridad.</span>
+      <h1>Tu negocio,<br><em>fresco</em> y en equilibrio.</h1>
+      <p>Ventas, clientes y cartera en un solo lugar. Cada canasta, cada abono y cada gasto, siempre a la vista.</p>
+      <ul class="login-points">
+        <li>{% icon 'check' 16 %} Ventas por unidad o por libra</li>
+        <li>{% icon 'check' 16 %} Cartera con abonos automáticos</li>
+        <li>{% icon 'check' 16 %} Reportes en PDF y Excel</li>
+      </ul>
+    </div>
+    <div class="login-float" aria-hidden="true">
+      <div class="lf-card lf-a"><span class="lf-dot"></span><div><small>Ventas del mes</small><strong>Todo conectado</strong></div>{% icon 'arrow-up-right' 18 %}</div>
+      <div class="lf-card lf-b">{% berry 22 %}<div><small>Cartera</small><strong>Todo bajo control</strong></div></div>
+    </div>
+    <small class="login-foot">Administración simple. Decisiones con confianza.</small>
+  </section>
+
+  <section class="login-panel">
+    <div class="login-card">
+      <div class="login-card-logo">{% berry 40 %}</div>
+      <div class="eyebrow">Bienvenido a Mi Contabilidad</div>
+      <h2>Qué bueno verte de nuevo</h2>
+      <p class="muted">Ingresa para continuar con tu negocio.</p>
+      {% for message in messages %}<div role="alert" class="alert {{ message.tags }}">{% icon 'alert' 18 %}<span>{{ message }}</span></div>{% endfor %}
+      <form method="post" class="login-form" data-loading>
+        {% csrf_token %}
+        <label class="field"><span class="field-label">Usuario o correo electrónico</span>
+          <span class="input-icon">{% icon 'user' 18 %}<input name="username" autocomplete="username" required autofocus maxlength="254" placeholder="tu usuario o correo"></span>
+        </label>
+        <label class="field"><span class="field-label">Contraseña</span>
+          <span class="input-icon">{% icon 'shield' 18 %}<input name="password" type="password" autocomplete="current-password" required placeholder="••••••••" id="login-password"><button type="button" class="input-reveal" data-reveal="login-password" aria-label="Mostrar contraseña">{% icon 'eye' 18 %}</button></span>
+        </label>
+        <button class="btn btn-primary btn-lg btn-block">Ingresar a mi negocio <span aria-hidden="true">{% icon 'arrow-right' 18 %}</span></button>
+      </form>
+      <p class="login-help">{% icon 'info' 15 %} ¿Necesitas acceso? Contacta al administrador de tu negocio.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

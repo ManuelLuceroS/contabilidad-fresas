@@ -1,0 +1,115 @@
+{% load static money ui %}<!doctype html>
+<html lang="es" data-app="mi-contabilidad">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14301F">
+<title>{% block doctitle %}{{ title|default:'Bienvenido' }}{% endblock %} · Mi Contabilidad</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 29.2c-6.4-2.3-10.6-8.4-10.6-13.4 0-4 3.3-6.2 6.3-5.6 1.5.3 2.8.8 4.3.8s2.8-.5 4.3-.8c3-.6 6.3 1.6 6.3 5.6 0 5-4.2 11.1-10.6 13.4z' fill='%23E23D55'/%3E%3Cpath d='M16 10.6c-2.3-2.6-5.3-3.2-8-2.4 1.6 2.4 4.6 3.4 8 2.4zM16 10.6c2.3-2.6 5.3-3.2 8-2.4-1.6 2.4-4.6 3.4-8 2.4z' fill='%233E9B5F'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="{% static 'ledger/app.css' %}">
+<script src="{% static 'ledger/app.js' %}" defer></script>
+</head>
+<body class="{% if user.is_authenticated %}is-app{% else %}is-public{% endif %}">
+{% if user.is_authenticated %}
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sb-top">
+      <a class="sb-brand" href="/">
+        <span class="sb-logo">{% berry 26 %}</span>
+        <span class="sb-name">Mi Contabilidad<small>Control de tu negocio</small></span>
+      </a>
+      <button type="button" class="sb-close icon-btn" data-nav-close aria-label="Cerrar menú">{% icon 'x' 18 %}</button>
+    </div>
+    <a class="sb-cta" href="/ventas/nueva/">{% icon 'plus' 18 %}<span>Nueva venta</span><kbd>N</kbd></a>
+    <div class="sb-scroll">
+      <div class="sb-label">Principal</div>
+      <nav class="sb-nav">
+        <a href="/" class="sb-link {% if request.path == '/' %}active{% endif %}">{% icon 'dashboard' %}<span>Resumen</span></a>
+        <a href="/ventas/" class="sb-link {% if '/ventas/' in request.path %}active{% endif %}">{% icon 'sales' %}<span>Ventas</span></a>
+        <a href="/cartera/" class="sb-link {% if '/cartera/' in request.path or '/abonos/' in request.path %}active{% endif %}">{% icon 'wallet' %}<span>Cuentas por cobrar</span></a>
+        <a href="/clientes/" class="sb-link {% if '/clientes/' in request.path %}active{% endif %}">{% icon 'users' %}<span>Clientes</span></a>
+        <a href="/productos/" class="sb-link {% if '/productos/' in request.path %}active{% endif %}">{% icon 'box' %}<span>Productos</span></a>
+        <a href="/gastos/" class="sb-link {% if '/gastos/' in request.path %}active{% endif %}">{% icon 'receipt' %}<span>Gastos</span></a>
+        <a href="/reportes/" class="sb-link {% if '/reportes/' in request.path %}active{% endif %}">{% icon 'chart' %}<span>Reportes</span></a>
+      </nav>
+      <div class="sb-label">Configuración</div>
+      <nav class="sb-nav">
+        <a href="/categorias/" class="sb-link {% if '/categorias/' in request.path %}active{% endif %}">{% icon 'tags' %}<span>Categorías de gastos</span></a>
+        <a href="/medios/" class="sb-link {% if '/medios/' in request.path %}active{% endif %}">{% icon 'card' %}<span>Medios de pago</span></a>
+      </nav>
+    </div>
+    <div class="sb-user">
+      <span class="avatar avatar-cream">{{ user.username|first|upper }}</span>
+      <div class="sb-user-info"><strong>{{ user.username }}</strong><small>{% icon 'shield' 12 %} Sesión segura</small></div>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="icon-btn sb-logout" title="Cerrar sesión" aria-label="Cerrar sesión">{% icon 'logout' 18 %}</button></form>
+    </div>
+  </aside>
+  <div class="scrim" data-nav-close></div>
+
+  <div class="shell">
+    <header class="topbar">
+      <button type="button" class="icon-btn menu-toggle" data-nav-open aria-label="Abrir menú" aria-controls="sidebar">{% icon 'menu' 20 %}</button>
+      <a class="top-brand" href="/">{% berry 22 %}<span>Mi Contabilidad</span></a>
+      <nav class="crumbs" aria-label="Ruta">
+        <a href="/">{% icon 'home' 15 %}<span>Mi negocio</span></a>
+        {% icon 'chevron-right' 14 'crumb-sep' %}
+        <span aria-current="page">{% block crumb %}{{ title }}{% endblock %}</span>
+      </nav>
+      <div class="top-actions">
+        <span class="date-chip">{% icon 'calendar' 15 %}<span>{% now "l, j \d\e F" %}</span></span>
+        <span class="status-chip" title="Tu información queda guardada en la base de datos del negocio"><i></i>Datos guardados</span>
+        <a class="btn btn-ghost btn-sm top-quick" href="/abonos/nuevo/">{% icon 'coins' 16 %}<span>Abono</span></a>
+        <form method="post" action="/salir/">{% csrf_token %}<button class="btn btn-ghost btn-sm top-logout" title="Cerrar sesión">{% icon 'logout' 16 %}<span>Salir</span></button></form>
+        <span class="avatar avatar-berry" title="{{ user.username }}">{{ user.username|first|upper }}</span>
+      </div>
+    </header>
+
+    <main id="contenido" class="page">
+      <div class="page-head">
+        <div class="page-title">
+          <div class="eyebrow">{% block eyebrow %}Tu negocio, en orden{% endblock %}</div>
+          <h1>{% block heading %}{{ title }}{% endblock %}</h1>
+          <p class="lede">{% block subtitle %}La información que necesitas, en un solo lugar.{% endblock %}</p>
+        </div>
+        <div class="page-actions">{% block actions %}{% endblock %}</div>
+      </div>
+      {% block content %}{% endblock %}
+      <footer class="app-footer">
+        <span>{% berry 16 %} Mi Contabilidad · Contabilidad operativa</span>
+        <span>Valores expresados en pesos colombianos (COP)</span>
+      </footer>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Navegación rápida">
+    <a href="/" class="{% if request.path == '/' %}active{% endif %}">{% icon 'dashboard' 20 %}<span>Resumen</span></a>
+    <a href="/ventas/" class="{% if '/ventas/' in request.path and request.path != '/ventas/nueva/' %}active{% endif %}">{% icon 'sales' 20 %}<span>Ventas</span></a>
+    <a href="/ventas/nueva/" class="mn-fab {% if request.path == '/ventas/nueva/' %}active{% endif %}" aria-label="Nueva venta">{% icon 'plus' 24 %}</a>
+    <a href="/cartera/" class="{% if '/cartera/' in request.path or '/abonos/' in request.path %}active{% endif %}">{% icon 'wallet' 20 %}<span>Cartera</span></a>
+    <button type="button" data-nav-open>{% icon 'more' 20 %}<span>Más</span></button>
+  </nav>
+</div>
+
+<div class="toast-stack" aria-live="polite">
+{% for message in messages %}<div role="alert" class="toast {{ message.tags }}" data-toast><span class="toast-icon">{% if message.tags == 'success' %}{% icon 'check-circle' 20 %}{% elif message.tags == 'error' %}{% icon 'alert' 20 %}{% else %}{% icon 'info' 20 %}{% endif %}</span><div class="toast-body"><strong>{% if message.tags == 'success' %}Listo{% elif message.tags == 'error' %}Revisa la información{% else %}Aviso{% endif %}</strong><span>{{ message }}</span></div><button type="button" class="toast-close" aria-label="Cerrar aviso">{% icon 'x' 16 %}</button></div>{% endfor %}
+</div>
+{% else %}
+<main class="public">{% block public %}{% for message in messages %}<div role="alert" class="alert {{ message.tags }}">{{ message }}</div>{% endfor %}{% endblock %}</main>
+{% endif %}
+
+<dialog class="modal" id="confirm-modal" aria-labelledby="confirm-title">
+  <form method="dialog" class="modal-card">
+    <div class="modal-icon">{% berry 30 %}</div>
+    <h2 id="confirm-title">Confirmar acción</h2>
+    <p id="confirm-text">¿Deseas continuar?</p>
+    <div class="modal-actions">
+      <button value="cancel" class="btn btn-ghost">Volver</button>
+      <button value="ok" class="btn btn-primary" id="confirm-ok">{% icon 'check' 16 %} Confirmar</button>
+    </div>
+  </form>
+</dialog>
+<div id="toast" role="status" class="sr-only"></div>
+<div id="chart-tip" class="chart-tip" hidden></div>
+</body>
+</html>

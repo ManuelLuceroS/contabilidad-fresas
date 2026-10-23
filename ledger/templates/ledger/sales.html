@@ -1,0 +1,83 @@
+{% extends 'ledger/base.html' %}{% load money ui %}
+{% block eyebrow %}Comercial{% endblock %}
+{% block actions %}<a class="btn btn-berry" href="/ventas/nueva/">{% icon 'plus' 17 %} Nueva venta</a>{% endblock %}
+{% block subtitle %}Consulta lo vendido en un periodo y el resumen de todos tus productos.{% endblock %}
+{% block content %}
+<p class="hint no-print">{% icon 'info' 16 %}<span>Elige <b>Desde</b> y <b>Hasta</b>, selecciona un cliente o todos, y pulsa <b>Consultar</b>. El PDF y el CSV usarán esos mismos filtros.</span></p>
+{% include 'ledger/filters.html' %}
+
+<section class="kpis">
+  <article class="kpi kpi-feature">
+    <div class="kpi-top"><span class="kpi-icon t-green">{% icon 'sales' 18 %}</span><span class="kpi-label">Total vendido</span></div>
+    <strong class="kpi-value">{{ total|cop }}</strong><small class="kpi-foot">{{ report.count }} ventas en la consulta</small>
+  </article>
+  <article class="kpi">
+    <div class="kpi-top"><span class="kpi-icon t-berry">{% icon 'box' 18 %}</span><span class="kpi-label">Cantidad total vendida</span></div>
+    <strong class="kpi-value">{{ report.quantity|plain_number }}</strong><small class="kpi-foot">Unidades o presentaciones</small>
+  </article>
+  <article class="kpi">
+    <div class="kpi-top"><span class="kpi-icon t-honey">{% icon 'scale' 18 %}</span><span class="kpi-label">Libras totales vendidas</span></div>
+    <strong class="kpi-value">{{ report.weight|plain_number }} <small>lb</small></strong><small class="kpi-foot">Productos vendidos por peso</small>
+  </article>
+</section>
+
+<section class="card table-card">
+  <div class="toolbar">
+    <div><h2 class="card-title">Detalle de ventas</h2><p class="card-sub">Haz clic en los encabezados para ordenar</p></div>
+    <div class="toolbar-right">
+      <form class="search no-print"><input type="hidden" name="start" value="{{ start|date:'Y-m-d' }}"><input type="hidden" name="end" value="{{ end|date:'Y-m-d' }}"><input type="hidden" name="customer" value="{{ request.GET.customer }}"><span class="input-icon">{% icon 'search' 16 %}<input name="q" value="{{ q }}" placeholder="Buscar cliente o número de venta"></span><button class="btn btn-ghost btn-sm">Buscar</button></form>
+      {% include 'ledger/export.html' %}
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="tbl" data-sortable id="sales-report">
+      <thead><tr><th>Fecha</th><th>Número</th><th>Cliente</th><th>Productos</th><th class="num">Cantidad</th><th class="num">Libras totales</th><th>Medio</th><th class="num">Total de la venta</th></tr></thead>
+      <tbody>
+      {% for s in sales %}
+        <tr>
+          <td class="nowrap">{{ s.occurred_at|date:'d/m/Y' }}<small>{{ s.occurred_at|date:'H:i' }}</small></td>
+          <td><a class="ref" href="/ventas/{{ s.pk }}/">{{ s }}</a></td>
+          <td><a class="cell-person" href="/clientes/{{ s.customer_id }}/estado/"><span class="avatar avatar-xs">{{ s.customer_name|first|upper }}</span>{{ s.customer_name }}</a></td>
+          <td><div class="pills">{% for l in s.lines.all %}<span class="pill">{{ l.name }} · {{ l.quantity|plain_number }}{% if l.by_weight %} · {{ l.total_weight|plain_number }} lb{% endif %}</span>{% endfor %}</div></td>
+          <td class="num">{{ s.report_totals.quantity|plain_number }}</td>
+          <td class="num">{{ s.report_totals.weight|plain_number }}</td>
+          <td><span class="badge b-neutral">{{ s.method_name }}</span></td>
+          <td class="num"><strong>{{ s.total|cop }}</strong></td>
+        </tr>
+      {% empty %}
+        <tr class="empty-row"><td colspan="8"><div class="empty-state"><div class="empty-art">{% icon 'search' 26 %}</div><h3>No hay ventas en esta consulta</h3><p>Ajusta los filtros o registra tu primera venta.</p><a class="btn btn-soft btn-sm" href="/ventas/nueva/">{% icon 'plus' 15 %} Nueva venta</a></div></td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr><th colspan="4">TOTAL VENDIDO · {{ report.count }} ventas</th><td class="num">{{ report.quantity|plain_number }}</td><td class="num">{{ report.weight|plain_number }} lb</td><td></td><td class="num">{{ total|cop }}</td></tr></tfoot>
+    </table>
+  </div>
+</section>
+
+<div class="grid-2-1">
+  <section class="card table-card">
+    <div class="toolbar"><div><h2 class="card-title">Resumen general por producto</h2><p class="card-sub">Acumulado de las ventas incluidas en esta consulta</p></div><span class="kpi-icon t-berry">{% icon 'layers' 18 %}</span></div>
+    <div class="table-wrap">
+      <table class="tbl" data-sortable id="product-summary">
+        <thead><tr><th>Producto</th><th class="num">Cantidad total</th><th class="num">Libras totales</th><th class="num">Total vendido</th></tr></thead>
+        <tbody>{% for r in report.products %}<tr><td><span class="cell-product"><span class="dot-berry"></span><strong>{{ r.name }}</strong></span></td><td class="num">{{ r.quantity|plain_number }}</td><td class="num">{% if r.by_weight %}{{ r.weight|plain_number }} lb{% else %}—{% endif %}</td><td class="num"><strong>{{ r.total|cop }}</strong></td></tr>{% empty %}<tr class="empty-row"><td colspan="4"><p class="muted center">No hay productos vendidos en esta consulta.</p></td></tr>{% endfor %}</tbody>
+        <tfoot><tr><th>TOTAL GENERAL VENDIDO</th><td class="num">{{ report.quantity|plain_number }}</td><td class="num">{{ report.weight|plain_number }} lb</td><td class="num">{{ total|cop }}</td></tr></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><h2 class="card-title">Valor vendido por cliente</h2><p class="card-sub">Participación en el total de la consulta</p></div></div>
+    <div class="bar-list">
+    {% for id,group in groups.items %}
+      <a class="bar-item" href="/clientes/{{ id }}/estado/">
+        <div class="bar-row"><span class="bar-name">{{ group.name }}{% if group.identification %} <small>· {{ group.identification }}</small>{% endif %}</span><strong class="money">{{ group.total|cop }}</strong></div>
+        <div class="meter meter-green"><span style="width:{% widthratio group.total total 100 %}%"></span></div>
+      </a>
+    {% empty %}
+      <p class="muted center">Sin ventas para este periodo.</p>
+    {% endfor %}
+    </div>
+    <div class="sum-row"><strong>TOTAL VENDIDO</strong><strong class="money">{{ total|cop }}</strong></div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'ledger/base.html' %}{% load money ui %}
+{% block eyebrow %}Cartera{% endblock %}
+{% block subtitle %}Lo que tus clientes te deben, cuánto han abonado y quién está al día.{% endblock %}
+{% block actions %}<a class="btn btn-primary" href="/abonos/nuevo/">{% icon 'plus' 17 %} Registrar abono</a>{% endblock %}
+{% block content %}
+<section class="portfolio">
+  <div class="seed-pattern" aria-hidden="true"></div>
+  <div class="portfolio-main">
+    <span class="hero-label">Cartera pendiente en la consulta</span>
+    <strong class="hero-value money">{{ total|cop }}</strong>
+    <small>Total vendido − total abonado (incluye pagos iniciales) = saldo pendiente.</small>
+  </div>
+  <div class="portfolio-split">
+    <div><small>Total vendido</small><strong class="money">{{ sold_total|cop }}</strong></div>
+    <div><small>Total abonado</small><strong class="money">{{ received_total|cop }}</strong></div>
+    <div class="portfolio-meter"><div class="meter meter-light"><span style="width:{% if sold_total %}{% widthratio received_total sold_total 100 %}{% else %}0{% endif %}%"></span></div><small>{% if sold_total %}{% widthratio received_total sold_total 100 %}{% else %}0{% endif %}% recuperado</small></div>
+  </div>
+</section>
+
+<section class="card table-card">
+  <div class="toolbar">
+    <div><h2 class="card-title">Estado de las cuentas</h2><p class="card-sub">{{ rows|length }} clientes en la consulta</p></div>
+    <form class="search"><span class="input-icon">{% icon 'search' 16 %}<input name="q" value="{{ q }}" placeholder="Buscar nombre o identificación"></span><button class="btn btn-ghost btn-sm">Buscar</button></form>
+  </div>
+  <div class="table-wrap">
+    <table class="tbl" data-sortable>
+      <thead><tr><th>Cliente</th><th class="num">Total vendido</th><th class="num">Total abonado</th><th class="num">Saldo pendiente</th><th>Último movimiento</th><th>Estado</th><th class="no-sort"></th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td><a class="cell-person" href="/clientes/{{ r.customer.pk }}/estado/"><span class="avatar avatar-sm">{{ r.customer.name|first|upper }}</span><span><strong>{{ r.customer.name }}</strong><small>{{ r.customer.identification }}</small></span></a></td>
+          <td class="num">{{ r.sold|cop }}</td>
+          <td class="num">{{ r.received|cop }}</td>
+          <td class="num"><strong class="{% if r.balance > 0 %}text-honey{% endif %}">{{ r.balance|cop }}</strong></td>
+          <td>{{ r.last|date:'d/m/Y'|default:'—' }}</td>
+          <td>{% if r.balance > 0 %}<span class="badge b-honey">{% icon 'clock' 13 %} Pendiente</span>{% else %}<span class="badge b-green">{% icon 'check' 13 %} Al día</span>{% endif %}<div class="status-meter"><div class="meter meter-green meter-sm" title="{% if r.sold %}{% widthratio r.received r.sold 100 %}{% else %}0{% endif %}% recuperado"><span style="width:{% if r.sold %}{% widthratio r.received r.sold 100 %}{% else %}0{% endif %}%"></span></div></div></td>
+          <td><div class="row-actions"><a class="btn btn-ghost btn-xs" href="/clientes/{{ r.customer.pk }}/estado/" title="Ver cuenta" aria-label="Ver cuenta de {{ r.customer.name }}">{% icon 'eye' 15 %}</a>{% if r.balance > 0 %}<a class="btn btn-soft btn-xs" href="/abonos/nuevo/?customer={{ r.customer.pk }}">{% icon 'coins' 14 %} Abonar</a>{% endif %}</div></td>
+        </tr>
+      {% empty %}
+        <tr class="empty-row"><td colspan="7"><div class="empty-state"><div class="empty-art">{% icon 'users' 26 %}</div><h3>Sin resultados</h3><p>No hay clientes que coincidan con la consulta.</p></div></td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr><th>TOTALES DE LA CONSULTA</th><td class="num">{{ sold_total|cop }}</td><td class="num">{{ received_total|cop }}</td><td class="num">{{ total|cop }}</td><td colspan="3"></td></tr></tfoot>
+    </table>
+  </div>
+</section>
+{% endblock %}

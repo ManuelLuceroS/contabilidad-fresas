@@ -1,0 +1,33 @@
+{% extends 'ledger/base.html' %}{% load money ui %}
+{% block eyebrow %}Cartera · Comprobante{% endblock %}
+{% block subtitle %}Comprobante de abono · Distribución conservada{% endblock %}
+{% block actions %}<div class="export-actions no-print"><a class="btn btn-ghost" href="/cartera/">{% icon 'arrow-left' 16 %} Cartera</a><button class="btn btn-ghost" data-print>{% icon 'printer' 16 %} Imprimir</button><a class="btn btn-primary" href="?export=pdf">{% icon 'download' 16 %} Descargar PDF</a></div>{% endblock %}
+{% block content %}
+<section class="receipt receipt-narrow">
+  <div class="receipt-band">
+    <div class="receipt-brand">{% berry 30 %}<div><strong>Mi Contabilidad</strong><small>COMPROBANTE DE ABONO</small></div></div>
+    <div class="receipt-no"><small>Número</small><h2>{{ payment }}</h2><span>{% icon 'calendar' 14 %} {{ payment.date|date:'d/m/Y' }}</span></div>
+  </div>
+  <div class="receipt-parties">
+    <div class="party">
+      <span class="avatar avatar-lg">{{ payment.customer.name|first|upper }}</span>
+      <div><small>Cliente</small><h3>{{ payment.customer.name }}</h3><p>{% icon 'id' 14 %} {{ payment.customer.identification|default:'Sin identificación registrada' }}</p></div>
+    </div>
+  </div>
+  <div class="amount-hero">
+    <span class="amount-check">{% icon 'check' 22 %}</span>
+    <div><small>Valor recibido</small><strong class="money">{{ payment.amount|cop }}</strong><span>{{ payment.method_name }} · Registró: {{ payment.created_by }}</span></div>
+  </div>
+  <h3 class="section-title">{% icon 'layers' 17 %} Distribución del pago</h3>
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead><tr><th>Venta</th><th class="num">Valor aplicado</th></tr></thead>
+      <tbody>{% for a in payment.allocations.all %}<tr><td><a class="ref" href="/ventas/{{ a.sale_id }}/">{{ a.sale }}</a></td><td class="num">{{ a.amount|cop }}</td></tr>{% endfor %}</tbody>
+      <tfoot><tr><th>TOTAL APLICADO</th><td class="num">{{ payment.amount|cop }}</td></tr></tfoot>
+    </table>
+  </div>
+  {% if payment.notes %}<div class="notes-box">{% icon 'edit' 15 %}<p>{{ payment.notes }}</p></div>{% endif %}
+  <a class="btn btn-soft no-print" href="/clientes/{{ payment.customer_id }}/estado/">Consultar estado de cuenta {% icon 'arrow-right' 15 %}</a>
+  <p class="internal-note">{% icon 'info' 14 %} Recaudo de una deuda existente. Este abono no representa una nueva venta.</p>
+</section>
+{% endblock %}
