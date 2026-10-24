@@ -2,6 +2,31 @@
 
 Aplicación web en español para un negocio comercial. Django 5.2 LTS sirve las pantallas y valida las operaciones; SQLite guarda la información localmente y PostgreSQL permite un despliegue con varios procesos. No requiere Node para instalar o ejecutar.
 
+## Organización del código
+
+- `config/settings.py`: configuración local y de producción mediante variables de entorno.
+- `config/urls.py`: rutas de la aplicación.
+- `ledger/models.py`: entidades, relaciones, restricciones y cálculo de saldos.
+- `ledger/forms.py`: campos y validaciones de los formularios.
+- `ledger/views.py`: permisos, filtros y respuestas a las solicitudes del navegador.
+- `ledger/services.py`: registro de ventas y abonos con transacciones y protección contra duplicados.
+- `ledger/reporting.py`: totales de ventas y agrupación por producto.
+- `ledger/exports.py`: generación de los reportes CSV y PDF.
+- `ledger/templates/` y `ledger/static/`: pantallas, estilos e interacción en el navegador.
+- `ledger/tests.py` y `config/test_settings.py`: pruebas contables, de acceso y de configuración de producción.
+
+Por ejemplo, al registrar una venta, `config/urls.py` dirige la solicitud a
+`sale_new` en `ledger/views.py`. La vista comprueba los permisos y llama a
+`create_sale` en `ledger/services.py`, que valida los productos, calcula los
+importes y guarda la venta junto con su pago inicial dentro de una transacción.
+
+Para ejecutar las pruebas desde el entorno virtual:
+
+```sh
+python manage.py test ledger config.test_settings --noinput
+python manage.py makemigrations --check --dry-run
+```
+
 ## Instalación y primer administrador
 
 Requisitos: Python 3.12–3.14. En macOS/Linux, desde esta carpeta:
