@@ -39,6 +39,8 @@ class Command(BaseCommand):
                     "loginattempt",
                     "allocation",
                     "saleline",
+                    "payrollday",
+                    "payrollsettings",
                 ]
             )
         )

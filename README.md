@@ -66,7 +66,7 @@ Como alternativa, la carpeta del proyecto incluye `Iniciar Mi Contabilidad.comma
 - Panel con ventas/gastos del día y mes, cartera actual, recaudos del periodo, clientes/productos activos, gráfico comparativo y mayores deudores.
 - Navegación adaptable, formatos COP, impresión sin menú y mensajes de confirmación.
 
-Los CSV se abren con Excel (UTF-8 con BOM, separador punto y coma). No se genera `.xlsx` nativo. El PDF de ventas agrupa cada venta con su propia tabla de productos: cantidad sin ceros sobrantes, libras totales, precio y subtotal; al pie de cada venta aparece su total y al final, el resumen general por producto. Los PDF se descargan directamente desde el servidor. También puede usar Imprimir → Guardar como PDF.
+Los CSV se abren con Excel (UTF-8 con BOM, separador punto y coma). Los reportes de ventas conservan CSV/PDF; el módulo de nómina adicional genera `.xlsx` nativo. El PDF de ventas agrupa cada venta con su propia tabla de productos: cantidad sin ceros sobrantes, libras totales, precio y subtotal; al pie de cada venta aparece su total y al final, el resumen general por producto. Los PDF se descargan directamente desde el servidor. También puede usar Imprimir → Guardar como PDF.
 
 ## Reglas financieras e integridad
 
@@ -459,3 +459,152 @@ el token a teléfonos: los teléfonos usan su propia sesión normal de usuario.
 Pruebas: `python manage.py test ledger config.test_settings --noinput` incluye
 API móvil, permisos, CSRF, reintentos y navegación de acceso. Antes de la activación
 real, valide también el acceso instalado en los teléfonos concretos del negocio.
+
+## Nómina, fumigación y comprobantes compartidos
+
+Esta ampliación utiliza la misma aplicación Django, autenticación, diseño y base de
+datos. Las migraciones **0005** (entidades, relaciones y restricciones agrícolas)
+y **0006** (permisos adicionales del grupo Operadores) son aditivas. No reemplazan
+clientes, productos de venta, ventas, abonos, usuarios ni gastos. Los productos
+fitosanitarios tienen un catálogo propio, separado de los productos vendidos.
+
+Para actualizar otra instalación, primero respalde su base correcta, instale las
+dependencias y aplique las migraciones desde su entorno de confianza:
+
+```sh
+python manage.py backup_db --directory backups/pre-agricola
+pip install -r requirements.txt
+python manage.py migrate --noinput
+python manage.py check
+```
+
+No es necesario volver a ejecutar `initialize` en una instalación existente. La
+migración agrega los permisos agrícolas de consulta, registro y cambio al grupo
+Operadores, sin quitar sus permisos previos. Otros grupos deben recibir permisos
+explícitos desde la administración. La configuración global de extras queda para
+el administrador o usuarios con `view_payrollsettings` y `change_payrollsettings`.
+Los modelos agrícolas no tienen edición directa en Django admin: las operaciones
+pasan por los formularios, validaciones, bloqueos y auditoría de la aplicación.
+
+### Uso de nómina
+
+En **Nómina → Configuración de tarifas**, el administrador debe definir una tarifa
+extra por hora (incluso cero, si así corresponde) o las horas ordinarias por día y
+un factor explícito para derivarla del valor del día. No hay salarios, recargos ni
+jornadas predeterminados. El minuto se paga proporcionalmente a la hora. Cada
+trabajador tiene su tarifa diaria individual y fecha de ingreso.
+
+En **Registro diario**, seleccione una fecha y registre quién trabajó, horas,
+minutos y observaciones. Los minutos se normalizan: 90 minutos son 1 h 30 min. La
+asistencia es única por trabajador y fecha; no se permiten extras sin día trabajado,
+fechas futuras ni días trabajados anteriores al ingreso. El límite técnico es 24
+horas extras acumuladas por registro; no es una recomendación de jornada.
+
+La tarifa diaria y la regla de extras se congelan cuando se **crea** la asistencia.
+Cambiar después el trabajador o la configuración solo afecta asistencias nuevas;
+una asistencia antigua editada conserva sus tarifas originales. Para cargar fechas
+pasadas, configure la tarifa correspondiente antes de crear sus registros. No se
+infiere una tarifa histórica inexistente. En la regla derivada, el importe se
+calcula directamente con la tarifa diaria, el factor, las horas ordinarias y los
+minutos enteros: se redondea a centavos por día, sin redondear primero la tarifa
+horaria de referencia mostrada. Todos los cálculos usan `Decimal`.
+
+**Generar nómina** admite cualquier rango no futuro. Guarda una copia del detalle
+diario, nombres, identificación, tarifas, reglas y totales, en estado **Generada**.
+Las asistencias incluidas quedan protegidas y no se liquidan de nuevo en otra nómina
+activa, incluso si sus períodos se solapan. Los reenvíos de la misma operación no
+crean otra liquidación. Puede confirmar el pago, registrar su fecha y exportar un
+Excel nativo `.xlsx` con hojas **Resumen** y **Detalle diario**. El archivo contiene
+valores históricos y cifras numéricas conciliadas; los textos del usuario no se
+convierten en fórmulas de Excel.
+
+Para corregir una liquidación, anúlela indicando el motivo, corrija su asistencia
+y genere una nueva. La liquidación original y su auditoría permanecen intactas.
+Solo un superusuario puede anular una nómina pagada. La confirmación de pago es
+operativa: **no crea automáticamente un gasto ni un movimiento de caja**, evitando
+duplicar gastos de nómina registrados por el flujo existente.
+
+### Uso de fumigación
+
+En **Programación de fumigación** administre productos, ingrediente, categoría,
+unidad, restricciones e intervalo opcional. Para guardar un intervalo debe indicar
+su fuente técnica o el responsable agrícola. No se incluyen dosis ni frecuencias
+predeterminadas.
+
+Un registro admite varios productos con cantidad y unidad, fecha/hora, área,
+responsable y observaciones. Puede guardarse como **Programada** o **Realizada**.
+La próxima fecha es opcional: al seleccionar productos con intervalo aparecen
+fechas orientativas, que solo rellenan la próxima fecha al pulsarlas. La programación
+se confirma al guardar el formulario. No se asigna automáticamente una frecuencia
+común a productos con intervalos diferentes. Una próxima aplicación copia productos
+y cantidades como **previstos**, editables antes de confirmar lo realmente aplicado.
+
+El calendario mensual permite cambiar de mes, consultar cada día/evento y filtrar
+por área y producto; en teléfonos se desplaza horizontalmente. Las listas permiten
+filtrar además por fechas. Se distinguen realizadas, programadas, vencidas y
+anuladas; se señala la proximidad dentro de tres días (solo un indicador visual).
+Llegar a la fecha nunca cambia una programación a realizada. Abra **Editar /
+confirmar aplicación realizada**, revise fecha, cantidades y responsable y cambie
+el estado explícitamente. Las programaciones se pueden editar o anular con motivo;
+las aplicaciones realizadas se conservan sin edición. Se auditan los cambios con
+sus datos anteriores y posteriores.
+
+### PDF y WhatsApp
+
+Al abrir el comprobante de una venta guardada se prepara el PDF desde los datos del
+servidor. Puede consultarlo, descargarlo, imprimirlo o pulsar **Enviar por WhatsApp**.
+El PDF incluye identificación histórica del cliente, consecutivo, fecha, detalles
+de unidades/peso, medio, pago inicial, total abonado y saldo **actual**, sin cambiar
+las reglas contables. La venta permanece guardada y el PDF se puede regenerar en
+consultas posteriores; no depende de un archivo temporal ni de un servicio externo.
+
+El botón usa el diálogo nativo de compartir archivos cuando el navegador lo admite:
+el usuario elige WhatsApp y confirma allí. Cuando no está disponible, descarga el
+PDF y explica cómo adjuntarlo manualmente. **Abrir conversación de WhatsApp** utiliza
+el teléfono del cliente con un mensaje preparado y no adjunta ni envía el PDF.
+No se afirma envío confirmado. No se publica una URL de la venta: los endpoints
+PDF siguen requiriendo sesión y permisos de ventas/pagos.
+
+Puede configurar `BUSINESS_NAME` para el encabezado del PDF y
+`WHATSAPP_COUNTRY_CODE` para números locales de diez dígitos (predeterminado `57`,
+Colombia). Los números internacionales con `+` conservan su prefijo. No hace falta
+una API externa para este flujo. El envío automático por WhatsApp Business Platform
+no está implementado: requeriría una integración oficial y credenciales privadas.
+La compatibilidad real del diálogo de compartir depende del navegador/dispositivo;
+la alternativa de descarga permanece disponible.
+
+Los módulos agrícolas se administran exclusivamente en la **instalación principal**.
+El protocolo offline del computador y la app `/movil/` conservan su alcance anterior
+(ventas, abonos, gastos y sus catálogos). Las rutas agrícolas de una réplica
+`OFFLINE_NODE=true` muestran esta limitación y bloquean cambios para evitar datos
+que no se sincronizarían.
+
+### Archivos y verificación de la ampliación
+
+- `ledger/farm_models.py`, importado desde `models.py`: ocho entidades nuevas.
+- `ledger/farm_forms.py`, `farm_services.py`, `farm_views.py`: validación,
+  transacciones serializadas, control de revisión, permisos y auditoría.
+- `ledger/farm_exports.py`: Excel nativo con tarifas históricas y detalle diario.
+- `ledger/receipt.py`, `views.py`, `templates/ledger/sale_detail.html` y
+  `static/ledger/receipt.js`: comprobante privado y opciones de compartir.
+- `templates/ledger/{attendance,payroll_*,worker_history,spray_*,farm_*}.html`,
+  `static/ledger/{app.css,farm.js}`, `templates/ledger/base.html` y `config/urls.py`:
+  navegación, formularios, calendario y diseño adaptable.
+- `migrations/0005_*`, `migrations/0006_*`, `middleware.py`,
+  `management/commands/initialize.py`, `config/settings.py`, `.env.example` y
+  `requirements.txt`: esquema, permisos, alcance offline y dependencias.
+- `ledger/test_farm.py`: cálculos, exportaciones, permisos, validaciones,
+  reintentos, concurrencia, aplicaciones y comprobantes de contado/crédito.
+
+```sh
+python manage.py test ledger config.test_settings --noinput
+python manage.py makemigrations --check --dry-run
+python manage.py check
+```
+
+La verificación de desarrollo también ensayó la migración sobre una copia SQLite,
+comparando íntegramente las tablas anteriores, renderizó el PDF y las pantallas en
+anchos de escritorio y móvil, y ejecutó los flujos JavaScript de productos, fechas
+sugeridas y compartir/descargar con APIs simuladas. No envió mensajes reales a
+clientes ni comprobó una integración oficial de WhatsApp. PostgreSQL y los
+navegadores concretos de los usuarios requieren verificación en su despliegue.

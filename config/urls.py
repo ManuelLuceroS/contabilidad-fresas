@@ -4,8 +4,28 @@ from ledger import views as v
 from ledger.sync import endpoint
 from ledger.sync_views import sync_status
 from ledger import mobile_views as mobile
+from ledger import farm_views as farm
 
 urlpatterns = [
+    path("nomina/", farm.payroll_list, name="payroll_list"),
+    path("nomina/generar/", farm.payroll_new, name="payroll_new"),
+    path("nomina/asistencia/", farm.attendance, name="attendance"),
+    path("nomina/tarifas/", farm.farm_catalog, {"kind": "settings"}, name="payroll_settings"),
+    path("nomina/trabajadores/", farm.farm_catalog, {"kind": "workers"}, name="workers"),
+    path("nomina/trabajadores/nuevo/", farm.farm_catalog, {"kind": "workers", "edit": True}, name="worker_new"),
+    path("nomina/trabajadores/<int:pk>/editar/", farm.farm_catalog, {"kind": "workers", "edit": True}, name="worker_edit"),
+    path("nomina/trabajadores/<int:pk>/", farm.worker_history, name="worker_history"),
+    path("nomina/<int:pk>/", farm.payroll_detail, name="payroll_detail"),
+    path("fumigacion/", farm.spray_list, name="spray_history"),
+    path("fumigacion/calendario/", farm.spray_list, {"mode": "calendar"}, name="spray_calendar"),
+    path("fumigacion/proximas/", farm.spray_list, {"mode": "upcoming"}, name="spray_upcoming"),
+    path("fumigacion/productos/", farm.farm_catalog, {"kind": "spray_products"}, name="spray_products"),
+    path("fumigacion/productos/nuevo/", farm.farm_catalog, {"kind": "spray_products", "edit": True}, name="spray_product_new"),
+    path("fumigacion/productos/<int:pk>/editar/", farm.farm_catalog, {"kind": "spray_products", "edit": True}, name="spray_product_edit"),
+    path("fumigacion/nueva/", farm.spray_edit, name="spray_new"),
+    path("fumigacion/<int:pk>/", farm.spray_detail, name="spray_detail"),
+    path("fumigacion/<int:pk>/editar/", farm.spray_edit, name="spray_edit"),
+
     path("movil/", mobile.shell, name="mobile"),
     path("movil/sw.js", mobile.service_worker),
     path("movil/manifest.webmanifest", mobile.manifest),

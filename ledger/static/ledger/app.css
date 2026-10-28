@@ -835,3 +835,21 @@ a.bar-item:hover{background:var(--cream-100)}
 .grid-1-2>.card .bar-list{margin-bottom:16px}
 .grid-1-2>.card .sum-row{margin-top:auto}
 .status-meter{margin-top:7px}.status-meter .meter-sm{width:100%;max-width:110px}
+
+/* Nómina y programación agrícola: utiliza la misma paleta y componentes. */
+.farm-tabs{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
+.farm-tabs label{display:grid;gap:4px}
+.attendance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:16px}
+.attendance-grid .field{margin-top:12px}
+.spray-row{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;padding:18px 0;border-bottom:1px solid var(--line)}
+.spray-row p{flex:1;min-width:130px}.spray-row label{display:block}.spray-row input,.spray-row select{max-width:100%}
+.spray-calendar{display:grid;grid-template-columns:repeat(7,minmax(100px,1fr));min-width:750px;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.calendar-label{background:var(--forest-100);padding:10px;text-align:center}
+.calendar-day{min-height:120px;padding:10px;background:var(--surface)}
+.calendar-event{display:block;margin-top:7px;padding:8px;border-radius:6px;background:var(--honey-100);color:var(--honey-700);overflow-wrap:anywhere}
+.calendar-event small{display:block}.event-completed{background:var(--forest-100);color:var(--forest-800)}
+.event-overdue{background:var(--berry-100);color:var(--berry-700)}.event-cancelled{background:var(--cream-200);color:var(--ink-2)}
+.audit-data{white-space:pre-wrap;overflow-wrap:anywhere}.farm-tabs ~ .card{margin-top:18px}
+
+.farm-form > .card p{margin-bottom:14px}.spray-row p:first-child{flex:2;min-width:200px}
+.farm-form .alert{display:block}.farm-form .alert .btn{margin:6px}

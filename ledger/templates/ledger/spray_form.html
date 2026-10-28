@@ -1,0 +1,6 @@
+{% extends 'ledger/base.html' %}{% load static %}
+{% block subtitle %}Registra cantidades reales o una programación que confirmarás cuando se aplique.{% endblock %}
+{% block content %}{% include 'ledger/farm_nav.html' %}
+<form class="farm-form" method="post" data-confirm="¿Guardar el registro y, si elegiste una próxima fecha, confirmar esa programación?">{% csrf_token %}<section class="card pad">{{ form.as_p }}<div class="alert" id="interval-suggestions" aria-live="polite">Los intervalos configurados solo sugieren fechas. Revisa etiqueta, restricciones y condiciones del cultivo antes de programar. Las cantidades de la próxima aplicación se copian como previstas y pueden editarse.</div></section>
+<section class="card pad"><h2 class="card-title">Productos y cantidades</h2>{{ rows.management_form }}{{ rows.non_form_errors }}<div id="spray-rows">{% for row in rows %}<div class="spray-row">{{ row.as_p }}</div>{% endfor %}</div><template id="spray-empty"><div class="spray-row">{{ rows.empty_form.as_p }}</div></template><button class="btn btn-ghost" type="button" id="add-spray-product">Agregar producto</button></section><div class="form-footer"><button class="btn btn-primary">Guardar fumigación</button></div></form>
+{{ product_rules|json_script:'spray-product-rules' }}<script src="{% static 'ledger/farm.js' %}" defer></script>{% endblock %}

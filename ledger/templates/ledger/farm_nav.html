@@ -1,0 +1,7 @@
+<nav class="farm-tabs no-print" aria-label="Secciones agrícolas">
+{% if '/nomina/' in request.path %}
+<a class="btn btn-ghost" href="/nomina/trabajadores/">Trabajadores</a><a class="btn btn-ghost" href="/nomina/asistencia/">Registro diario</a><a class="btn btn-ghost" href="/nomina/generar/">Generar nómina</a><a class="btn btn-ghost" href="/nomina/">Historial de nóminas</a><a class="btn btn-ghost" href="/nomina/tarifas/">Configuración de tarifas</a>
+{% else %}
+<a class="btn btn-ghost" href="/fumigacion/productos/">Productos para fumigación</a><a class="btn btn-ghost" href="/fumigacion/nueva/">Registrar fumigación</a><a class="btn btn-ghost" href="/fumigacion/calendario/">Calendario</a><a class="btn btn-ghost" href="/fumigacion/proximas/">Próximas aplicaciones</a><a class="btn btn-ghost" href="/fumigacion/">Historial de aplicaciones</a>
+{% endif %}
+</nav>

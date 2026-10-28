@@ -269,3 +269,7 @@ class SyncReceipt(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['kind', 'token'], name='sync_kind_token_unique')]
+
+# Django registra también los modelos agrícolas dentro de la aplicación existente.
+from .farm_models import (Worker, PayrollSettings, Attendance, Payroll, PayrollDay,
+                          SprayProduct, SprayApplication, SprayLine)  # noqa: E402,F401

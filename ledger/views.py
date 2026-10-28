@@ -444,47 +444,13 @@ def sale_detail(request, pk=None, token=None):
         **({"token": token} if token else {"pk": pk})
     )
     totals = line_totals(sale.lines.all())
+    from .receipt import sale_receipt, whatsapp_url
     if request.GET.get("export") == "pdf":
-        rows = [
-            [
-                l.name,
-                plain_number(l.quantity),
-                l.unit,
-                plain_number(l.weight) if l.by_weight else "—",
-                plain_number(l.total_weight) if l.by_weight else "—",
-                cop(l.price),
-                cop(l.subtotal),
-            ]
-            for l in sale.lines.all()
-        ]
-        return export_table(
-            "pdf",
-            str(sale) + " · Comprobante de venta interno",
-            [
-                "Producto",
-                "Cantidad",
-                "Unidad",
-                "lb / presentación",
-                "Peso total lb",
-                "Precio",
-                "Subtotal",
-            ],
-            rows,
-            f"{sale.customer_name} · {timezone.localtime(sale.occurred_at):%d/%m/%Y %H:%M} · {sale.method_name} | Total: {cop(sale.total)} | Pago inicial: {cop(sale.initial_payment)} | Total abonado: {cop(sale.paid)} | Saldo actual: {cop(sale.balance)}",
-            totals=[
-                "Total vendido",
-                plain_number(totals["quantity"]),
-                "",
-                "",
-                plain_number(totals["weight"]),
-                "",
-                cop(sale.total),
-            ],
-        )
+        return sale_receipt(sale, inline=request.GET.get("view") == "1")
     return render(
         request,
         "ledger/sale_detail.html",
-        dict(title=str(sale), sale=sale, totals=totals),
+        dict(title=str(sale), sale=sale, totals=totals, whatsapp_url=whatsapp_url(sale)),
     )
 
 

@@ -154,3 +154,7 @@ SYNC_BUSINESS = os.getenv("SYNC_BUSINESS", "")
 SYNC_INTERVAL = max(30, int(os.getenv("SYNC_INTERVAL", "120")))
 if OFFLINE_NODE and (ON_VERCEL or not DATABASES["default"]["ENGINE"].endswith("sqlite3")):
     raise RuntimeError("OFFLINE_NODE requiere una instalación local con SQLite")
+
+# Nombre visible en comprobantes; no son credenciales.
+BUSINESS_NAME = os.getenv("BUSINESS_NAME", "Mi Contabilidad")
+WHATSAPP_COUNTRY_CODE = os.getenv("WHATSAPP_COUNTRY_CODE", "57")

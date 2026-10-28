@@ -1,0 +1,8 @@
+{% extends 'ledger/base.html' %}
+{% block subtitle %}Selecciona la fecha, marca quién trabajó y registra el tiempo extra. 90 minutos se guardan como 1 hora y 30 minutos.{% endblock %}
+{% block content %}{% include 'ledger/farm_nav.html' %}
+<form class="farm-tabs" method="get"><label>Fecha <input type="date" name="date" value="{{ day|date:'Y-m-d' }}" required></label><button class="btn btn-ghost">Consultar fecha</button></form>
+<p class="alert">Las tarifas se fijan al crear cada asistencia. Las asistencias ya liquidadas están protegidas; anula la nómina con un motivo antes de corregirlas.</p>
+<form method="post">{% csrf_token %}{{ rows.management_form }}{{ rows.non_form_errors }}
+<div class="attendance-grid">{% for row in rows %}<section class="card pad"><h2 class="card-title">{{ row.worker_name }}</h2>{% if row.locked %}<p class="badge b-green">Liquidada · registro protegido</p>{% endif %}{{ row.non_field_errors }}{% for field in row %}{% if field.is_hidden %}{{ field }}{{ field.errors }}{% else %}<div class="field">{% if field.field.widget.input_type == 'checkbox' %}<label class="switch-row" for="{{ field.id_for_label }}">{{ field }}<span class="switch" aria-hidden="true"></span><span class="switch-text"><strong>{{ field.label }}</strong></span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{{ field.errors }}</div>{% endif %}{% endfor %}</section>{% empty %}<p>No hay trabajadores activos para esta fecha. Regístralos en Trabajadores.</p>{% endfor %}</div>
+{% if rows.forms %}<div class="form-footer"><button class="btn btn-primary">Guardar registro diario</button></div>{% endif %}</form>{% endblock %}
