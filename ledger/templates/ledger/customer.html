@@ -48,14 +48,14 @@
   <section class="card">
     <div class="card-head"><div><h2 class="card-title">Historial completo de ventas</h2><p class="card-sub">Todas las ventas de este cliente</p></div><span class="kpi-icon t-green">{% icon 'sales' 18 %}</span></div>
     <div class="history-list">
-    {% for s in sales %}<a class="history-item" href="/ventas/{{ s.pk }}/"><span class="hi-icon t-green">{% icon 'cart' 16 %}</span><div><strong>{{ s }}</strong><small>{{ s.occurred_at|date:'d/m/Y' }}</small></div><div class="hi-amount"><strong>{{ s.total|cop }}</strong>{% if s.balance > 0 %}<small class="text-honey">Saldo {{ s.balance|cop }}</small>{% else %}<small class="text-green">Saldo {{ s.balance|cop }}</small>{% endif %}</div></a>{% empty %}<p class="muted center">Sin ventas.</p>{% endfor %}
+    {% for s in sales %}<a class="history-item" href="/ventas/operacion/{{ s.token }}/"><span class="hi-icon t-green">{% icon 'cart' 16 %}</span><div><strong>{{ s }}</strong><small>{{ s.occurred_at|date:'d/m/Y' }}</small></div><div class="hi-amount"><strong>{{ s.total|cop }}</strong>{% if s.balance > 0 %}<small class="text-honey">Saldo {{ s.balance|cop }}</small>{% else %}<small class="text-green">Saldo {{ s.balance|cop }}</small>{% endif %}</div></a>{% empty %}<p class="muted center">Sin ventas.</p>{% endfor %}
     </div>
     <div class="sum-row"><strong>TOTAL VENDIDO</strong><span><strong class="money">{{ history_sold|cop }}</strong><small>Deuda {{ history_balance|cop }}</small></span></div>
   </section>
   <section class="card">
     <div class="card-head"><div><h2 class="card-title">Historial completo de abonos</h2><p class="card-sub">Pagos iniciales y abonos posteriores</p></div><span class="kpi-icon t-honey">{% icon 'coins' 18 %}</span></div>
     <div class="history-list">
-    {% for p in payments %}<a class="history-item" href="/abonos/{{ p.pk }}/"><span class="hi-icon t-honey">{% icon 'coins' 16 %}</span><div><strong>{{ p }}</strong><small>{{ p.date|date:'d/m/Y' }} · {{ p.created_by }}</small></div><div class="hi-amount"><strong>{{ p.amount|cop }}</strong></div></a>{% empty %}<p class="muted center">Sin abonos.</p>{% endfor %}
+    {% for p in payments %}<a class="history-item" href="/abonos/operacion/{{ p.token }}/"><span class="hi-icon t-honey">{% icon 'coins' 16 %}</span><div><strong>{{ p }}</strong><small>{{ p.date|date:'d/m/Y' }} · {{ p.created_by }}</small></div><div class="hi-amount"><strong>{{ p.amount|cop }}</strong></div></a>{% empty %}<p class="muted center">Sin abonos.</p>{% endfor %}
     </div>
     <div class="sum-row"><strong>TOTAL ABONADO</strong><strong class="money">{{ history_received|cop }}</strong></div>
   </section>

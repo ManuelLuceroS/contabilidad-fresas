@@ -22,7 +22,7 @@
   <div class="table-wrap">
     <table class="tbl">
       <thead><tr><th>Venta</th><th class="num">Valor aplicado</th></tr></thead>
-      <tbody>{% for a in payment.allocations.all %}<tr><td><a class="ref" href="/ventas/{{ a.sale_id }}/">{{ a.sale }}</a></td><td class="num">{{ a.amount|cop }}</td></tr>{% endfor %}</tbody>
+      <tbody>{% for a in payment.allocations.all %}<tr><td><a class="ref" href="/ventas/operacion/{{ a.sale.token }}/">{{ a.sale }}</a></td><td class="num">{{ a.amount|cop }}</td></tr>{% endfor %}</tbody>
       <tfoot><tr><th>TOTAL APLICADO</th><td class="num">{{ payment.amount|cop }}</td></tr></tfoot>
     </table>
   </div>

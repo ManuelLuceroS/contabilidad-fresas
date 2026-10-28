@@ -1,7 +1,7 @@
 """Registro transaccional de ventas, abonos y movimientos del cliente."""
 
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-from uuid import UUID
+from uuid import UUID, uuid5, NAMESPACE_URL
 from django.db import transaction, OperationalError, connection
 from functools import wraps
 import time
@@ -97,7 +97,7 @@ def next_number():
 
 @retry_locked
 @transaction.atomic
-def create_sale(*, user, customer_id, rows, method, initial, cash_method, token):
+def create_sale(*, user, customer_id, rows, method, initial, cash_method, token, occurred_at=None):
     """Registra la venta y su pago inicial una sola vez por token."""
     token = token_value(token)
     customer = lock_customer(customer_id)
@@ -161,6 +161,7 @@ def create_sale(*, user, customer_id, rows, method, initial, cash_method, token)
         customer_identification=customer.identification,
         method=method,
         method_name=method.name,
+        occurred_at=occurred_at or timezone.now(),
         total=total,
         initial_payment=initial,
         created_by=user,
@@ -169,11 +170,13 @@ def create_sale(*, user, customer_id, rows, method, initial, cash_method, token)
         SaleLine.objects.create(sale=sale, **detail)
     if initial:
         payment = Payment.objects.create(
+            token=uuid5(NAMESPACE_URL, f"fresas:initial:{token}"),
             customer=customer,
             amount=initial,
             method=cash_method,
             method_name=cash_method.name,
             initial_sale=sale,
+            date=timezone.localtime(sale.occurred_at).date(),
             created_by=user,
         )
         Allocation.objects.create(payment=payment, sale=sale, amount=initial)

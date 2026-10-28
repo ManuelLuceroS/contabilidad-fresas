@@ -36,7 +36,7 @@
       {% for s in sales %}
         <tr>
           <td class="nowrap">{{ s.occurred_at|date:'d/m/Y' }}<small>{{ s.occurred_at|date:'H:i' }}</small></td>
-          <td><a class="ref" href="/ventas/{{ s.pk }}/">{{ s }}</a></td>
+          <td><a class="ref" href="/ventas/operacion/{{ s.token }}/">{{ s }}</a></td>
           <td><a class="cell-person" href="/clientes/{{ s.customer_id }}/estado/"><span class="avatar avatar-xs">{{ s.customer_name|first|upper }}</span>{{ s.customer_name }}</a></td>
           <td><div class="pills">{% for l in s.lines.all %}<span class="pill">{{ l.name }} · {{ l.quantity|plain_number }}{% if l.by_weight %} · {{ l.total_weight|plain_number }} lb{% endif %}</span>{% endfor %}</div></td>
           <td class="num">{{ s.report_totals.quantity|plain_number }}</td>

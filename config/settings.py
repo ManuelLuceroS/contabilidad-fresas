@@ -52,6 +52,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "ledger.middleware.PrivatePagesMiddleware",
+    "ledger.middleware.OfflineReplicaMiddleware",
 ]
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [
@@ -64,6 +65,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "ledger.sync_views.replica_context",
             ]
         },
     }
@@ -142,3 +144,13 @@ if ON_VERCEL and not TRUST_PROXY:
     raise RuntimeError("TRUST_PROXY debe ser true detrás del proxy HTTPS de Vercel")
 if TRUST_PROXY:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Una instalación local SQLite y una nube autoritativa por negocio.
+OFFLINE_NODE = os.getenv("OFFLINE_NODE", "false").lower() == "true"
+SYNC_URL = os.getenv("SYNC_URL", "").rstrip("/")
+SYNC_TOKEN = os.getenv("SYNC_TOKEN", "")
+SYNC_USER = os.getenv("SYNC_USER", "")
+SYNC_BUSINESS = os.getenv("SYNC_BUSINESS", "")
+SYNC_INTERVAL = max(30, int(os.getenv("SYNC_INTERVAL", "120")))
+if OFFLINE_NODE and (ON_VERCEL or not DATABASES["default"]["ENGINE"].endswith("sqlite3")):
+    raise RuntimeError("OFFLINE_NODE requiere una instalación local con SQLite")

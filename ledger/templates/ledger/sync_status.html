@@ -1,0 +1,21 @@
+{% extends 'ledger/base.html' %}
+{% block subtitle %}Consulta dónde se guardan tus movimientos y cuándo llegaron a la nube.{% endblock %}
+{% block content %}
+<section class="card" style="padding:24px" aria-live="polite">
+{% if offline_node %}
+<h2>Aplicación local · funciona sin internet</h2>
+<p>Ventas, abonos y gastos quedan guardados en SQLite en este computador, incluso después de cerrarlo.</p>
+<p><strong>{{ pending_count }} movimientos pendientes de enviar</strong></p>
+{% if pending_operations %}<ul>{% for movement in pending_operations %}<li>{% if movement.total != None %}Venta {{ movement }} · {{ movement.total }} COP{% elif movement.customer_id %}Abono {{ movement }} · {{ movement.amount }} COP{% else %}Gasto · {{ movement.amount }} COP{% endif %} · {{ movement.created_at|date:'d/m/Y H:i' }}</li>{% endfor %}</ul>{% endif %}
+<p>Última sincronización completa: <strong>{{ state.last_success|date:'d/m/Y H:i'|default:'Todavía no se ha sincronizado' }}</strong></p>
+{% if state.last_error %}<p role="alert">{{ state.last_error }}</p><p>Los movimientos pendientes siguen guardados en este equipo. Si existe un conflicto de catálogo o cartera, debe revisarlo el administrador; no se elimina automáticamente.</p>{% endif %}
+{% if not state.initialized %}<p>Conecta el equipo a internet y realiza la configuración inicial antes de registrar movimientos.</p>{% endif %}
+<p>La aplicación intenta sincronizar periódicamente en segundo plano después de abrirla. Actualiza esta pantalla para consultar el estado.</p>
+<p>Productos, clientes, categorías y medios de pago se administran en la nube. Los números de venta locales son provisionales hasta sincronizar. La cartera puede cambiar cuando lleguen movimientos registrados en la nube.</p>
+{% else %}
+<h2>Aplicación en la nube</h2>
+<p>Esta versión necesita internet. Para trabajar sin conexión, abre la instalación local del computador preparado para el negocio.</p>
+<p>El catálogo se administra aquí y se descarga al computador durante cada sincronización completa.</p>
+{% endif %}
+</section>
+{% endblock %}

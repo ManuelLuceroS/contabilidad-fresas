@@ -78,8 +78,12 @@ def date_filter(qs, field, start, end):
 
 
 def login_view(request):
+    from django.utils.http import url_has_allowed_host_and_scheme
+    target = request.POST.get('next') or request.GET.get('next') or '/'
+    if not url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        target = '/'
     if request.user.is_authenticated:
-        return redirect("dashboard")
+        return redirect(target)
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
         key = hashlib.sha256(username.casefold().encode()).hexdigest()
@@ -98,7 +102,7 @@ def login_view(request):
         if user:
             LoginAttempt.objects.filter(pk=attempt.pk).update(failures=0)
             login(request, user)
-            return redirect("dashboard")
+            return redirect(target)
         if not blocked:
             count = (
                 attempt.failures + 1
@@ -402,7 +406,7 @@ def sale_new(request):
             messages.success(
                 request, "Venta registrada. El comprobante ya está disponible."
             )
-            return redirect("sale_detail", pk=sale.pk)
+            return redirect("sale_operation", token=sale.token)
         except (ValidationError, ValueError, TypeError, Customer.DoesNotExist) as exc:
             error(request, exc)
     products = list(
@@ -434,9 +438,10 @@ def sale_new(request):
 
 @login_required
 @permission_required(("ledger.view_sale", "ledger.view_payment"), raise_exception=True)
-def sale_detail(request, pk):
+def sale_detail(request, pk=None, token=None):
     sale = get_object_or_404(
-        Sale.objects.prefetch_related("lines", "allocations__payment"), pk=pk
+        Sale.objects.prefetch_related("lines", "allocations__payment"),
+        **({"token": token} if token else {"pk": pk})
     )
     totals = line_totals(sale.lines.all())
     if request.GET.get("export") == "pdf":
@@ -706,7 +711,7 @@ def payment_new(request):
                 token=request.POST.get("token"),
             )
             messages.success(request, "Abono registrado y aplicado a la cartera.")
-            return redirect("payment_detail", pk=payment.pk)
+            return redirect("payment_operation", token=payment.token)
         except (ValidationError, ValueError, TypeError, Customer.DoesNotExist) as exc:
             error(request, exc)
     return render(
@@ -731,12 +736,12 @@ def payment_new(request):
     ("ledger.view_payment", "ledger.view_sale", "ledger.view_customer"),
     raise_exception=True,
 )
-def payment_detail(request, pk):
+def payment_detail(request, pk=None, token=None):
     payment = get_object_or_404(
         Payment.objects.select_related("customer", "created_by").prefetch_related(
             "allocations__sale"
         ),
-        pk=pk,
+        **({"token": token} if token else {"pk": pk}),
     )
     if request.GET.get("export") == "pdf":
         return export_table(

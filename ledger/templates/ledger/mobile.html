@@ -1,0 +1,29 @@
+{% load static %}<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14301f"><meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/movil/manifest.webmanifest"><link rel="apple-touch-icon" href="{% static 'ledger/mobile-icon-192.png' %}">
+<link rel="stylesheet" href="{% static 'ledger/mobile.css' %}"><script src="{% static 'ledger/mobile.js' %}" defer></script>
+<title>Fresas · App sin internet</title></head>
+<body><header><a href="/">🍓 Fresas</a><span id="connection">Comprobando conexión…</span></header>
+<main><h1>Tu negocio, donde estés</h1><p>Registra ahora. Sincroniza cuando tengas conexión.</p>
+<div id="notice" role="status" aria-live="polite"></div>
+<section class="card"><h2>Datos del teléfono</h2><p id="account">Preparando almacenamiento…</p><p id="last-sync"></p><p id="pending-count"></p>
+<div class="actions"><button id="sync" type="button">Sincronizar</button><a href="/ingresar/?next=/movil/" id="login">Iniciar sesión en la nube</a></div>
+<p id="install-status">Abre esta app con internet por primera vez. Luego agrégala a la pantalla de inicio desde el menú del navegador; en iPhone usa Compartir → Agregar a inicio.</p>
+<p>Los datos quedan en este dispositivo. Usa su bloqueo de pantalla. No borres los datos del navegador ni desinstales la app mientras haya pendientes.</p>
+</section>
+<div id="workspace" hidden>
+<nav aria-label="Nuevo movimiento"><button data-tab="sale" type="button">Venta</button><button data-tab="payment" type="button">Abono</button><button data-tab="expense" type="button">Gasto</button></nav>
+<form id="movement" class="card"><h2 id="form-title">Nueva venta</h2>
+<div id="customer-field"><label>Cliente<select id="customer"></select></label><p id="balance"></p></div>
+<div id="sale-fields"><div id="lines"></div><button id="add-line" type="button" class="secondary">Agregar producto</button><p id="sale-total"></p>
+<label>Pago inicial (COP)<input id="initial" type="number" min="0" step="0.01" value="0" inputmode="decimal"></label>
+<label>Condición de venta<select id="sale-method"></select></label>
+<label>Medio del pago inicial<select id="cash-method"></select></label></div>
+<div id="other-fields" hidden><label>Valor (COP)<input id="amount" type="number" min="0.01" step="0.01" inputmode="decimal"></label>
+<label>Fecha<input id="date" type="date"></label><label>Medio de pago<select id="method"></select></label>
+<div id="category-field" hidden><label>Categoría<select id="category"></select></label></div>
+<label>Descripción u observaciones<textarea id="notes" maxlength="2000"></textarea></label></div>
+<button type="submit" id="save">Guardar en este teléfono</button><p>El número definitivo se asigna en la nube. Los importes y saldos locales son provisionales hasta sincronizar.</p></form>
+<section class="card"><h2>Movimientos en este dispositivo</h2><ul id="queue"></ul><button id="export" class="secondary" type="button">Descargar respaldo de pendientes</button></section>
+</div></main></body></html>

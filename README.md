@@ -294,3 +294,168 @@ saldos y totales de reportes entre origen y destino; pruebe crear y consultar un
 operación. Haga un backup del destino y conserve el origen para recuperación.
 No ejecute initialize antes de importar una copia con sus propias categorías y
 medios de pago. Redépliegue y compruebe que los datos permanecen tras otro deploy.
+
+## Trabajo sin internet y sincronización (computador local)
+
+La versión web de Vercel sigue necesitando internet. Esta adaptación permite usar
+una **instalación local de Django y SQLite** sin conexión, con sincronizador en
+segundo plano. No es todavía un APK ni una app de iPhone, ni convierte una pestaña
+de Vercel en una aplicación offline. El lanzador incluido funciona en macOS;
+`sync_cloud` usa bloqueo de archivo Unix (macOS/Linux).
+
+### Preparación de la nube
+
+1. Respalde la base de producción y despliegue el código con la migración `0004`.
+   Ejecute `python manage.py migrate` contra la base correcta en su proceso de
+   publicación, fuera del build de Vercel.
+2. Cree un usuario técnico dedicado, activo, con permisos `view` para clientes,
+   productos, medios, categorías, ventas, pagos y gastos, y `add` para ventas,
+   pagos y gastos. No necesita ser staff ni superusuario.
+3. Configure en Vercel `OFFLINE_NODE=false`, `SYNC_USER` con ese nombre de usuario,
+   `SYNC_BUSINESS` con un identificador permanente del negocio y `SYNC_TOKEN`
+   aleatorio privado de al menos 32 caracteres. Puede generarlo con
+   `python -c 'import secrets; print(secrets.token_urlsafe(48))'`.
+   Conserve PostgreSQL, HTTPS y las demás variables existentes.
+4. Publique una nueva versión. `/api/sync/` acepta exclusivamente POST autenticado
+   con Bearer token; el token nunca se envía al navegador ni aparece en la interfaz.
+
+### Preparación del computador
+
+Use **otra instalación y una base SQLite nueva**, no la base local con movimientos
+existentes. La inicialización se niega a mezclar automáticamente esos datos.
+Respalde cualquier instalación anterior con `backup_db` antes de preparar otra.
+No copie la URL PostgreSQL de producción a la configuración local.
+
+Configure el `.env` local con `DEBUG=true`, `OFFLINE_NODE=true`, una
+`DATABASE_URL=sqlite:////ruta/absoluta/fresas-local.sqlite3`,
+`ALLOWED_HOSTS=localhost,127.0.0.1`, `TRUST_PROXY=false`, el mismo `SYNC_BUSINESS`
+y `SYNC_TOKEN` de la nube, y `SYNC_URL=https://contabilidad-fresas.vercel.app`
+(o su dominio real). Proteja `.env`, la base y los respaldos con los permisos del
+sistema operativo. La identidad del negocio debe ser idéntica en ambos extremos.
+
+Desde la instalación local, con su entorno virtual activo:
+
+```sh
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py sync_cloud
+python scripts/open_app.py
+```
+
+La primera sincronización requiere internet y descarga el catálogo y el historial
+completo. Las contraseñas no se descargan: el usuario local se crea con
+`createsuperuser`; los autores de nube sin cuenta local reciben cuentas sin
+contraseña utilizable, sin privilegios. Los usuarios locales existentes conservan
+su contraseña y permisos. No reutilice un nombre de usuario de otro negocio.
+El lanzador abre la aplicación y arranca `sync_cloud --watch`, que intenta
+sincronizar cada `SYNC_INTERVAL` segundos (mínimo 30, predeterminado 120).
+Para iniciar con terminales separadas, use `runserver 127.0.0.1:8001 --noreload`
+y `python manage.py sync_cloud --watch`.
+
+### Comportamiento y límites
+
+- Se pueden registrar ventas, abonos y gastos sin conexión. La sesión y los datos
+  permanecen en el equipo; el inicio de sesión funciona con la contraseña local.
+- Clientes, productos, precios, medios y categorías se administran en la nube.
+  La aplicación local bloquea sus cambios, incluidos los POST del administrador.
+  Los gastos existentes también se editan desde la nube en esta versión.
+- Un registro local sin recibo de sincronización es un movimiento pendiente.
+  Se envían en orden de registro, primero las ventas y luego sus abonos cuando
+  corresponde. El pago inicial se envía con su venta, nunca dos veces.
+- El servidor recalcula importes, valida precios/presentaciones vigentes y aplica
+  abonos a la cartera real. Conserva la fecha original de la venta y de su pago
+  inicial. UUID y recibo transaccional evitan duplicados cuando la conexión se
+  corta después de que el servidor confirmó la operación.
+- Si cambió el precio o el peso fijo, se inactivó un producto, o un abono supera
+  la deuda disponible, se detiene la cola. Los movimientos quedan guardados y el
+  error aparece en **Estado de datos**. Requiere revisión del administrador;
+  todavía no existe una pantalla para resolver o anular pendientes conflictivos.
+  No borre la base ni edite el historial mediante SQL para resolverlo.
+- Solo cuando no quedan pendientes se reemplaza el historial local por una copia
+  coherente de la nube, dentro de una transacción SQLite. Si se registra algo
+  durante la descarga, se conserva y se pospone el reemplazo. El catálogo se
+  actualiza junto al historial; mientras haya un conflicto puede quedar desactualizado.
+- Los consecutivos de venta locales son provisionales y pueden cambiar al recibir
+  el consecutivo definitivo de nube. No use recibos locales como numeración fiscal.
+  La cartera offline refleja la última copia más los movimientos de ese equipo;
+  otros movimientos de nube aparecen al terminar la sincronización.
+- Esta versión admite **un único computador offline por negocio**. No copie su
+  base/configuración a varios dispositivos. La app local requiere el proceso local
+  funcionando; una futura versión móvil necesitará almacenamiento y empaquetado
+  para el sistema operativo elegido. La descarga completa está pensada para un
+  negocio pequeño; todavía no usa sincronización incremental del historial.
+- Mantenga respaldos locales: los pendientes aún no están protegidos por las
+  copias de seguridad de PostgreSQL. Cerrar el navegador no borra los datos.
+
+Pruebas adicionales: `python manage.py test ledger.test_sync --noinput`.
+La activación real requiere configurar ambas instalaciones y probar primero con
+una base de ensayo. No basta con desplegar este código en Vercel para que un
+computador o teléfono ya pueda trabajar sin conexión.
+
+## App instalable en celulares (Android y iPhone)
+
+La ruta **`/movil/` del dominio HTTPS** ofrece la app web instalable. El menú
+principal incluye **App sin internet**. En teléfonos usa IndexedDB para los datos
+y un service worker para abrir la interfaz sin red; no requiere un computador
+encendido ni expone la clave técnica `SYNC_TOKEN`. Esta opción complementa la
+instalación SQLite del computador. No es un APK ni un paquete nativo de App Store.
+
+1. Con internet, inicia sesión con un usuario autorizado y abre `/movil/`.
+2. Pulsa **Sincronizar** y espera la confirmación, el nombre de cuenta y la fecha
+   de la copia. Espera también el mensaje **App preparada para abrir sin internet**.
+3. Android: usa Instalar/Agregar a pantalla de inicio en el navegador. iPhone:
+   Safari → Compartir → Agregar a inicio. Abre el acceso recién agregado con red
+   y sincroniza otra vez: el almacenamiento del acceso instalado puede ser distinto.
+4. Antes de usar datos reales, activa modo avión, cierra y vuelve a abrir ese acceso,
+   registra una venta de ensayo y comprueba que siga pendiente después de reabrir.
+   Al recuperar conexión abre la app, inicia sesión si venció y sincroniza.
+
+Se registran ventas de varios productos por unidades o peso, abonos y gastos.
+Los cálculos locales usan enteros de precisión arbitraria y redondeo por renglón;
+la nube vuelve a validar todos los importes, permisos y catálogo. No se actualizan
+precios de un pendiente silenciosamente. Un conflicto detiene el envío conservando
+la cola. Los abonos se validan con la deuda local y nuevamente con la deuda real.
+El catálogo se descarga de la nube y no tiene formularios de edición en el móvil.
+
+La sincronización se intenta al abrir, recuperar red, volver a la app y cada dos
+minutos mientras está visible. No se promete sincronización con la app cerrada:
+iOS limita el trabajo de fondo. La sesión se renueva con internet; perderla no
+borra los pendientes. Una copia móvil pertenece a una cuenta y negocio: cambiar
+de cuenta bloquea su envío y visualización hasta volver a la cuenta original.
+La protección del acceso offline depende del bloqueo del dispositivo. IndexedDB
+no cifra por sí mismo los datos y quien accede al perfil del navegador puede verlos.
+No use navegación privada ni borre los datos del sitio mientras haya pendientes.
+La opción de respaldo descarga la cola en JSON para recuperación asistida; no
+incluye importación automática ni es un archivo de Excel.
+
+Pueden trabajar teléfonos independientes y un único computador SQLite para el
+negocio. Sin internet no conocen los movimientos de otros dispositivos, así que
+sus saldos son provisionales. Un sobreabono concurrente se rechaza en la nube y
+requiere revisión; no se elimina ni se ajusta automáticamente.
+
+### Instalación local aislada preparada en este Mac
+
+`python scripts/local_app.py setup` crea `.offline/.env` privado y una base nueva,
+aplica migraciones y prepara medios/categorías. Conserva las cuentas de administrador
+locales existentes sin copiar movimientos ni modificar la base anterior. La clave
+técnica generada permanece fuera de Git. `.offline/` contiene información privada.
+
+- `python scripts/local_app.py open`: abre el servidor local en el puerto 8002 y
+  arranca el sincronizador. También se incluye **Abrir Fresas sin internet.command**.
+- `python scripts/local_app.py sync`: primer intento manual, con el sincronizador
+  detenido. Si hay uno activo, su bloqueo evita duplicarlo.
+- `python scripts/local_app.py user`: crea un administrador si no había ninguno.
+- `python scripts/local_app.py check`: verifica la configuración aislada.
+
+Para completar la activación, configure en Vercel `SYNC_BUSINESS`, `SYNC_TOKEN`
+y `SYNC_USER` con los valores privados de `.offline/.env`, mantenga
+`OFFLINE_NODE=false`, aplique `migrate` y ejecute `provision_sync` contra la base
+correcta de nube. Este comando crea un usuario técnico sin contraseña interactiva,
+con los permisos mínimos de lectura y registro. No utilice un administrador humano
+como `SYNC_USER`. Después publique la versión y verifique la primera sincronización
+completa desde el computador. No exponga el servidor local a internet ni copie
+el token a teléfonos: los teléfonos usan su propia sesión normal de usuario.
+
+Pruebas: `python manage.py test ledger config.test_settings --noinput` incluye
+API móvil, permisos, CSRF, reintentos y navegación de acceso. Antes de la activación
+real, valide también el acceso instalado en los teléfonos concretos del negocio.

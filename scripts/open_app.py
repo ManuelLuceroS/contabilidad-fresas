@@ -1,6 +1,8 @@
 """Abre la contabilidad local sin exigir una terminal ni iniciar procesos duplicados."""
 
 import argparse
+import os
+from dotenv import load_dotenv
 from pathlib import Path
 import subprocess
 import sys
@@ -9,7 +11,12 @@ from urllib.request import urlopen
 from urllib.error import URLError
 
 ROOT = Path(__file__).resolve().parent.parent
-URL = "http://127.0.0.1:8001/ingresar/"
+LOCAL_CONFIG = ROOT / '.offline/.env'
+if LOCAL_CONFIG.exists():
+    load_dotenv(LOCAL_CONFIG, override=True)
+PORT = int(os.getenv('LOCAL_PORT', '8001'))
+URL = f"http://127.0.0.1:{PORT}/ingresar/"
+LOG_ROOT = ROOT / '.offline' if LOCAL_CONFIG.exists() else ROOT
 
 
 def ready():
@@ -17,7 +24,7 @@ def ready():
         with urlopen(URL, timeout=2) as response:
             page = response.read()
             if b'data-app="mi-contabilidad"' not in page:
-                raise RuntimeError("El puerto 8001 está ocupado por otra aplicación.")
+                raise RuntimeError("El puerto local está ocupado por otra aplicación.")
             return True
     except URLError:
         return False
@@ -28,7 +35,7 @@ def main():
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
     if not ready():
-        logs = ROOT / "logs"
+        logs = LOG_ROOT / "logs"
         logs.mkdir(exist_ok=True)
         with (logs / "server.log").open("ab") as log:
             process = subprocess.Popen(
@@ -36,7 +43,7 @@ def main():
                     str(ROOT / ".venv/bin/python"),
                     "manage.py",
                     "runserver",
-                    "127.0.0.1:8001",
+                    f"127.0.0.1:{PORT}",
                     "--noreload",
                 ],
                 cwd=ROOT,
@@ -58,6 +65,15 @@ def main():
             raise RuntimeError(
                 "Mi Contabilidad tardó demasiado en iniciar. Intente abrirla de nuevo."
             )
+    # El worker mantiene su propio bloqueo para no duplicarse al volver a abrir.
+    logs = LOG_ROOT / "logs"
+    logs.mkdir(exist_ok=True)
+    with (logs / "sync.log").open("ab") as sync_log:
+        subprocess.Popen(
+            [str(ROOT / ".venv/bin/python"), "manage.py", "sync_cloud", "--watch"],
+            cwd=ROOT, stdin=subprocess.DEVNULL, stdout=sync_log,
+            stderr=subprocess.STDOUT, start_new_session=True,
+        )
     if not args.no_browser:
         subprocess.run(["open", URL], check=True)
     print("Mi Contabilidad está lista: " + URL)

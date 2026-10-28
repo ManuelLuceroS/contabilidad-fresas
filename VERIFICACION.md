@@ -79,3 +79,29 @@ Las tablas de estados de cuenta, cartera, ventas individuales, abonos, clientes 
 Se verificó con Chromium en la base aislada existente: dos ventas de $320.000 y $45.000 totalizan $365.000, 13 unidades/presentaciones y 160 lb. Los pagos de $330.000 dejan deuda de $35.000. Un rango sin ventas muestra totales cero. Se comprobó ordenamiento sin mover el pie, PDF y vistas de 390 px sin desbordamiento del documento. El PDF se renderizó y revisó visualmente con Poppler, incluidos el resumen y los totales finales. Una prueba adicional de 35 ventas verifica que todas aparecen en un PDF de varias páginas y que la última página contiene el resumen y el total de $525.000.
 
 Los cambios no requieren migraciones ni alteran datos financieros existentes. Se creó un respaldo antes de comenzar.
+
+## App móvil offline (27 de octubre de 2026)
+
+Se preparó un servidor y una base SQLite de ensayo separados de la instalación y
+los datos reales. Con pantalla de 390×844 se comprobó en Chromium y WebKit:
+
+1. Acceso con usuario y regreso a `/movil/`.
+2. Instalación del service worker y copia local del catálogo.
+3. Apertura de `/movil/` con el servidor inaccesible y conservación al recargar.
+4. Venta de dos canastas de 16 lb a $2.000/lb: total $64.000 y pago inicial $1.000.
+5. Abono de $500 y gasto de $100 sin conexión; tres movimientos en IndexedDB.
+6. Reconexión, vaciado confirmado de la cola y aumento de cartera de $62.500.
+7. Ausencia de errores JavaScript durante el recorrido.
+
+En Chromium se utilizó el modo offline del navegador. En WebKit se detuvo y
+reinició el servidor de ensayo: la emulación offline de Playwright tiene un
+[problema conocido con navegaciones atendidas por service workers](https://github.com/microsoft/playwright/issues/42775).
+La prueba de WebKit no equivale a una validación en un iPhone físico: antes de
+usar datos reales debe repetirse desde el acceso instalado de los dispositivos
+concretos, en modo avión y después de cerrar y abrir la app.
+
+La suite `python manage.py test ledger config.test_settings --noinput` incluye
+75 pruebas de contabilidad, configuración y sincronización. La instalación local
+se preparó de forma aislada en `.offline/`, con migraciones y comprobación Django.
+La primera descarga y el envío real a Vercel quedan pendientes de conectar la
+cuenta de Vercel, configurar sus variables privadas y publicar la nueva versión.

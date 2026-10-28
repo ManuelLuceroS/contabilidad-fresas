@@ -33,6 +33,7 @@
         <a href="/gastos/" class="sb-link {% if '/gastos/' in request.path %}active{% endif %}">{% icon 'receipt' %}<span>Gastos</span></a>
         <a href="/reportes/" class="sb-link {% if '/reportes/' in request.path %}active{% endif %}">{% icon 'chart' %}<span>Reportes</span></a>
       </nav>
+      <a class="sb-link" href="/movil/">{% icon 'box' %}<span>App sin internet</span></a>
       <div class="sb-label">Configuración</div>
       <nav class="sb-nav">
         <a href="/categorias/" class="sb-link {% if '/categorias/' in request.path %}active{% endif %}">{% icon 'tags' %}<span>Categorías de gastos</span></a>
@@ -58,7 +59,7 @@
       </nav>
       <div class="top-actions">
         <span class="date-chip">{% icon 'calendar' 15 %}<span>{% now "l, j \d\e F" %}</span></span>
-        <span class="status-chip" title="Tu información queda guardada en la base de datos del negocio"><i></i>Datos guardados</span>
+        <a class="status-chip" href="{% url 'sync_status' %}"><i></i>Estado de datos</a>
         <a class="btn btn-ghost btn-sm top-quick" href="/abonos/nuevo/">{% icon 'coins' 16 %}<span>Abono</span></a>
         <form method="post" action="/salir/">{% csrf_token %}<button class="btn btn-ghost btn-sm top-logout" title="Cerrar sesión">{% icon 'logout' 16 %}<span>Salir</span></button></form>
         <span class="avatar avatar-berry" title="{{ user.username }}">{{ user.username|first|upper }}</span>
@@ -74,6 +75,7 @@
         </div>
         <div class="page-actions">{% block actions %}{% endblock %}</div>
       </div>
+      {% if offline_replica %}<div class="alert" role="status">Guardado en este computador. Los consecutivos y la cartera se confirman al sincronizar. <a href="{% url 'sync_status' %}">Ver pendientes y última sincronización</a></div>{% endif %}
       {% block content %}{% endblock %}
       <footer class="app-footer">
         <span>{% berry 16 %} Mi Contabilidad · Contabilidad operativa</span>

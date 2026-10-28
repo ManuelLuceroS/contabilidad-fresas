@@ -252,3 +252,20 @@ class LoginAttempt(models.Model):
     key = models.CharField(max_length=64, unique=True)
     failures = models.PositiveIntegerField(default=0)
     last_attempt = models.DateTimeField(default=timezone.now)
+
+
+class SyncState(models.Model):
+    """Estado de la réplica local; no contiene las credenciales de conexión."""
+    initialized = models.BooleanField(default=False)
+    business = models.CharField(max_length=100, blank=True)
+    last_success = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(blank=True)
+
+
+class SyncReceipt(models.Model):
+    token = models.UUIDField()
+    kind = models.CharField(max_length=20)
+    digest = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['kind', 'token'], name='sync_kind_token_unique')]

@@ -35,7 +35,7 @@
       <div class="table-wrap">
         <table class="tbl tbl-compact">
           <thead><tr><th>Comprobante</th><th>Fecha</th><th>Medio</th><th class="num">Valor abonado</th></tr></thead>
-          <tbody>{% for a in sale.allocations.all %}<tr><td><a class="ref" href="/abonos/{{ a.payment_id }}/">{{ a.payment }}</a></td><td>{{ a.payment.date|date:'d/m/Y' }}</td><td><span class="badge b-neutral">{{ a.payment.method_name }}</span></td><td class="num">{{ a.amount|cop }}</td></tr>{% empty %}<tr class="empty-row"><td colspan="4"><p class="muted center">Esta venta aún no tiene pagos.</p></td></tr>{% endfor %}</tbody>
+          <tbody>{% for a in sale.allocations.all %}<tr><td><a class="ref" href="/abonos/operacion/{{ a.payment.token }}/">{{ a.payment }}</a></td><td>{{ a.payment.date|date:'d/m/Y' }}</td><td><span class="badge b-neutral">{{ a.payment.method_name }}</span></td><td class="num">{{ a.amount|cop }}</td></tr>{% empty %}<tr class="empty-row"><td colspan="4"><p class="muted center">Esta venta aún no tiene pagos.</p></td></tr>{% endfor %}</tbody>
           <tfoot><tr><th colspan="3">TOTAL ABONADO</th><td class="num">{{ sale.paid|cop }}</td></tr><tr><th colspan="3">DEUDA PENDIENTE</th><td class="num">{{ sale.balance|cop }}</td></tr></tfoot>
         </table>
       </div>
