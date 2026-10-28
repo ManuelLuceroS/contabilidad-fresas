@@ -20,13 +20,35 @@ from .whatsapp import (configuration_problem, dispatch_message, normalize_phone,
                        individual_payroll_pdf, message_audit)
 
 
-def queue_context(jobs):
+def queue_context(jobs, payroll=None):
     jobs = list(jobs)
     for job in jobs:
         contact = job.sale.customer if job.sale_id else job.worker
         phone = normalize_phone(contact.phone)
         job.manual_url = ('https://wa.me/' + phone + '?' + urlencode({'text': f'Hola {job.recipient_name}. Nómina {job.reference}: {job.summary}. Adjunto el comprobante.'})) if phone else ''
-    return dict(wa_jobs=jobs, wa_sender=settings.WHATSAPP_SENDER_NUMBER,
+    manual_workers = []
+    if payroll is not None:
+        from django.urls import reverse
+        from .models import Worker
+        from .farm_services import payroll_summary
+        from .templatetags.money import cop
+        rows = payroll_summary(payroll)
+        contacts = {w.pk: w for w in Worker.objects.filter(pk__in=[r['worker_id'] for r in rows])}
+        for row in rows:
+            if row['total'] <= 0:
+                continue
+            contact = contacts[row['worker_id']]
+            phone = normalize_phone(contact.phone)
+            state = 'Total pagado' if payroll.status == 'paid' else ('Nómina anulada. Total original' if payroll.status == 'cancelled' else 'Total devengado (pago pendiente)')
+            text = (f'Hola {row["name"]}, te comparto tu resumen de nómina #{payroll.pk}. '
+                    f'Período: {payroll.start:%d/%m/%Y} a {payroll.end:%d/%m/%Y}. '
+                    f'Días trabajados: {row["days"]}. Extras: {row["hours"]} h {row["remaining_minutes"]} min. '
+                    f'{state}: {cop(row["total"])}. Adjunto tu PDF individual.')
+            manual_workers.append(dict(row, phone=phone, message=text,
+                pdf_url=reverse('payroll_document', args=[payroll.pk, row['worker_id']]),
+                filename=f'nomina-{payroll.pk}-trabajador-{row["worker_id"]}.pdf',
+                chat_url=('https://wa.me/' + phone + '?' + urlencode({'text': text})) if phone else ''))
+    return dict(wa_jobs=jobs, wa_manual_workers=manual_workers, wa_sender=settings.WHATSAPP_SENDER_NUMBER,
                 wa_problem=configuration_problem(), wa_enabled=not bool(configuration_problem()))
 
 

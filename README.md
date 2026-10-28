@@ -707,3 +707,26 @@ Pruebas adicionales: `ledger/test_whatsapp_payroll.py` valida gastos únicos,
 anulaciones, pago confirmado, documentos individuales, consentimiento, remitente,
 plantillas, callbacks, permisos y resultados de red inciertos, con la API simulada.
 No envía pruebas a números reales ni valida credenciales inexistentes.
+
+
+### Compartir desde WhatsApp normal en el dispositivo
+
+El flujo predeterminado de ventas y nómina funciona sin Cloud API, sin token de Meta
+y sin WhatsApp Business. Pulse **Enviar por WhatsApp · PDF y total** en una venta o
+**Compartir PDF y total** en el resumen individual del trabajador. El diálogo nativo
+incluye el PDF y el mensaje con el total; el usuario elige WhatsApp, el contacto y
+confirma el envío desde su cuenta abierta. El sistema no selecciona automáticamente
+la cuenta remitente ni confirma la entrega por abrir ese diálogo.
+
+El mensaje de venta contiene su consecutivo y total, además del saldo si está pendiente.
+El de nómina contiene solo el nombre, período, días, extras y total de ese trabajador.
+Se diferencia total pagado de devengado pendiente, y las nóminas históricas también
+se pueden compartir aunque no tengan registros en la cola automática.
+
+Si el navegador no comparte archivos, el botón descarga el PDF. Abra el chat desde
+el enlace del cliente/trabajador, que precarga el mensaje con su total, y adjunte el
+PDF descargado. También hay **Copiar mensaje con el total**, por si WhatsApp omite
+el texto al recibir el archivo desde el diálogo del sistema. Los archivos siguen
+requiriendo sesión y permisos; no se crean enlaces públicos a facturas ni sueldos.
+El panel de configuración/estados de Cloud API aparece solo en instalaciones que
+activen esa integración: no es un requisito para compartir desde WhatsApp normal.

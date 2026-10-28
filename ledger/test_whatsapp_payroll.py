@@ -305,7 +305,50 @@ class PayrollExpenseWhatsAppTests(TestCase):
         self.assertEqual(response.status_code, 302)
         p = Payroll.objects.get()
         page = self.client.get(f'/nomina/{p.pk}/')
-        self.assertContains(page, '573115893850')
+        self.assertContains(page, 'Compartir PDF y total')
         self.assertContains(page, 'Descargar PDF individual')
         self.assertContains(page, 'Gasto NO-')
         self.assertEqual(self.client.get(f'/ventas/{self.sale().pk}/').status_code, 200)
+
+
+    @override_settings(WHATSAPP_ENABLED=False)
+    def test_manual_sale_sharing_needs_no_api_or_opt_in(self):
+        self.customer.whatsapp_opt_in = False
+        self.customer.save()
+        sale = self.sale()
+        page = self.client.get(f'/ventas/{sale.pk}/')
+        self.assertContains(page, 'WhatsApp normal')
+        self.assertContains(page, 'PDF y total')
+        self.assertNotContains(page, 'Falta activar WhatsApp Business Platform')
+        message = page.context['sale_share_message']
+        self.assertIn('Total de la venta: $ 50.000,00', message)
+        self.assertIn(str(sale), message)
+        self.assertContains(page, 'data-share-text=')
+        from urllib.parse import urlparse, parse_qs
+        chat_message = parse_qs(urlparse(page.context['whatsapp_url']).query)['text'][0]
+        self.assertEqual(message, chat_message)
+        self.assertFalse(sale.whatsapp_messages.exists())
+
+    @override_settings(WHATSAPP_ENABLED=False)
+    def test_historical_payroll_can_share_each_total_without_jobs_or_api(self):
+        p = self.payroll(paid=True)
+        p.whatsapp_messages.all().delete()
+        page = self.client.get(f'/nomina/{p.pk}/')
+        rows = page.context['wa_manual_workers']
+        self.assertEqual(len(rows), 2)
+        first = next(w for w in rows if w['worker_id'] == self.a.pk)
+        self.assertIn(self.a.name, first['message'])
+        self.assertNotIn(self.b.name, first['message'])
+        self.assertIn('Total pagado: $ 65.000,00', first['message'])
+        self.assertNotIn('105.000', first['message'])
+        self.assertIn(f'/trabajador/{self.a.pk}/pdf/', first['pdf_url'])
+        self.assertIn('573001234567', first['chat_url'])
+        self.assertNotContains(page, 'Falta activar WhatsApp Business Platform')
+        self.assertNotContains(page, 'Revisar / reintentar envío automático')
+
+    def test_manual_unpaid_payroll_does_not_claim_paid_total(self):
+        p = self.payroll()
+        page = self.client.get(f'/nomina/{p.pk}/')
+        for row in page.context['wa_manual_workers']:
+            self.assertIn('pago pendiente', row['message'])
+            self.assertNotIn('Total pagado', row['message'])

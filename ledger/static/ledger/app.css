@@ -853,3 +853,4 @@ a.bar-item:hover{background:var(--cream-100)}
 
 .farm-form > .card p{margin-bottom:14px}.spray-row p:first-child{flex:2;min-width:200px}
 .farm-form .alert{display:block}.farm-form .alert .btn{margin:6px}
+.worker-share-actions{width:100%;min-width:0}.worker-share-actions textarea{width:100%;margin-bottom:10px}

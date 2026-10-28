@@ -445,14 +445,14 @@ def sale_detail(request, pk=None, token=None):
         **({"token": token} if token else {"pk": pk})
     )
     totals = line_totals(sale.lines.all())
-    from .receipt import sale_receipt, whatsapp_url
+    from .receipt import sale_receipt, whatsapp_url, sale_whatsapp_text
     from .whatsapp_views import queue_context
     if request.GET.get("export") == "pdf":
         return sale_receipt(sale, inline=request.GET.get("view") == "1")
     return render(
         request,
         "ledger/sale_detail.html",
-        dict(title=str(sale), sale=sale, totals=totals, whatsapp_url=whatsapp_url(sale),
+        dict(title=str(sale), sale=sale, totals=totals, whatsapp_url=whatsapp_url(sale), sale_share_message=sale_whatsapp_text(sale),
              **queue_context(sale.whatsapp_messages.select_related('sale__customer'))),
     )
 

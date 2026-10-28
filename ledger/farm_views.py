@@ -162,7 +162,7 @@ def payroll_detail(request, pk):
         history=Audit.objects.filter(entity=Payroll._meta.label, object_id=pk).order_by('-date'),
         expense_entry=PayrollExpense.objects.filter(payroll=p).select_related('expense__method').first(),
         payment_methods=PaymentMethod.objects.filter(active=True, is_credit=False),
-        **queue_context(p.whatsapp_messages.select_related('worker', 'payroll'))))
+        **queue_context(p.whatsapp_messages.select_related('worker', 'payroll'), payroll=p)))
 
 
 @login_required

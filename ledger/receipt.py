@@ -12,7 +12,7 @@ def whatsapp_url(sale):
     digits = normalize_phone(sale.customer.phone)
     if not digits:
         return ''
-    message = f'Hola {sale.customer_name}, te comparto el comprobante {sale} de {settings.BUSINESS_NAME} por {cop(sale.total)}. Adjunto el PDF en esta conversación.'
+    message = sale_whatsapp_text(sale)
     return f'https://wa.me/{digits}?' + urlencode({'text': message})
 
 
@@ -29,3 +29,11 @@ def sale_receipt(sale, inline=False):
     disposition = 'inline' if inline else 'attachment'
     response['Content-Disposition'] = f'{disposition}; filename="{sale}.pdf"'
     return response
+
+
+def sale_whatsapp_text(sale):
+    text = (f'Hola {sale.customer_name}, te comparto el comprobante {sale} de {settings.BUSINESS_NAME}. '
+            f'Total de la venta: {cop(sale.total)}.')
+    if sale.balance > 0:
+        text += f' Total abonado: {cop(sale.paid)}. Saldo pendiente: {cop(sale.balance)}.'
+    return text + ' Adjunto el PDF con el detalle.'
