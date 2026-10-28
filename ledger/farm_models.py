@@ -17,6 +17,8 @@ def money(label):
 class Worker(Timestamp):
     name = models.CharField('Nombre completo', max_length=180)
     identification = models.CharField('Identificación', max_length=40, blank=True)
+    phone = models.CharField('WhatsApp del trabajador', max_length=40, blank=True, db_default='')
+    whatsapp_opt_in = models.BooleanField('Autorizó recibir resúmenes por WhatsApp', default=False, db_default=False)
     occupation = models.CharField('Cargo u ocupación', max_length=100, blank=True)
     joined_on = models.DateField('Fecha de ingreso', default=timezone.localdate)
     daily_rate = money('Valor del día (COP)')
@@ -150,3 +152,11 @@ class SprayLine(models.Model):
             models.UniqueConstraint(fields=['application', 'product'], name='spray_product_unique'),
             models.CheckConstraint(condition=Q(quantity__gt=0), name='spray_quantity_positive'),
         ]
+
+
+class PayrollExpense(Timestamp):
+    """Vínculo contable inmutable: una sola causación por liquidación."""
+    payroll = models.OneToOneField(Payroll, on_delete=models.PROTECT, related_name='expense_entry')
+    expense = models.OneToOneField('ledger.Expense', on_delete=models.PROTECT, related_name='payroll_entry')
+    active = models.BooleanField(default=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)

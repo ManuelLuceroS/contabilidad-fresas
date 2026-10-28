@@ -41,9 +41,12 @@ class Command(BaseCommand):
                     "saleline",
                     "payrollday",
                     "payrollsettings",
+                    "payrollexpense",
+                    "whatsappmessage",
                 ]
             )
         )
+        group.permissions.add(Permission.objects.get(codename='send_whatsappmessage', content_type__app_label='ledger'))
         self.stdout.write(
             self.style.SUCCESS(
                 "Configuración inicial lista. Cree el administrador con createsuperuser."

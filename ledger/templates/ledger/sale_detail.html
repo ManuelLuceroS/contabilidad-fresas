@@ -5,6 +5,7 @@
 {% block content %}
 <section class="card pad no-print"><div class="farm-tabs"><button type="button" class="btn btn-primary" id="share-receipt" data-pdf="?export=pdf" data-filename="{{ sale }}.pdf">Enviar por WhatsApp</button>{% if whatsapp_url %}<a class="btn btn-ghost" href="{{ whatsapp_url }}" target="_blank" rel="noopener noreferrer">Abrir conversación de WhatsApp</a>{% else %}<span>Registra un número de WhatsApp válido en los datos del cliente para abrir su conversación.</span>{% endif %}</div><p id="receipt-share-status" role="status">Elige WhatsApp en el diálogo de compartir del dispositivo. Si no está disponible, descarga el PDF y adjúntalo en la conversación. Abrir WhatsApp no envía el archivo automáticamente.</p></section>
 <script src="{% static 'ledger/receipt.js' %}" defer></script>
+{% include 'ledger/whatsapp_queue.html' %}
 <section class="receipt">
   <div class="receipt-band">
     <div class="receipt-brand">{% berry 30 %}<div><strong>Mi Contabilidad</strong><small>COMPROBANTE DE VENTA INTERNO</small></div></div>

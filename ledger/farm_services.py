@@ -1,5 +1,6 @@
 """Operaciones serializadas y auditadas de nómina y fumigación."""
 import json
+from uuid import uuid5
 from collections import OrderedDict
 from decimal import Decimal, ROUND_HALF_UP
 from django.core.exceptions import ValidationError
@@ -9,7 +10,7 @@ from django.db.models import F
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from .models import (Sequence, Worker, PayrollSettings, Attendance, Payroll, PayrollDay,
-                     SprayApplication, SprayLine)
+                     SprayApplication, SprayLine, PayrollExpense, Expense, ExpenseCategory, PaymentMethod)
 from .services import audit, retry_locked
 
 
@@ -94,7 +95,7 @@ def save_attendance(date, rows, user):
 
 @retry_locked
 @transaction.atomic
-def generate_payroll(start, end, token, user):
+def generate_payroll(start, end, token, user, paid=False, payment_method=None):
     lock_farm()
     existing = Payroll.objects.filter(token=token).first()
     if existing:
@@ -128,6 +129,16 @@ def generate_payroll(start, end, token, user):
     payroll.total = total
     payroll.full_clean()
     payroll.save()
+    if paid and not payment_method:
+        raise ValidationError('Seleccione el medio de pago real.')
+    if paid:
+        payment_method = real_payment_method(payment_method.pk)
+        payroll.status = 'paid'
+        payroll.paid_at = timezone.now()
+        payroll.save()
+    create_payroll_expense(payroll, user, payment_method if paid else None)
+    from .whatsapp import enqueue_payroll
+    enqueue_payroll(payroll, user)
     audit(user, payroll, 'Generar nómina', after={'start': str(start), 'end': str(end), 'total': str(total)})
     return payroll
 
@@ -136,7 +147,7 @@ def payroll_summary(payroll):
     workers = OrderedDict()
     for day in payroll.days.order_by('pk'):
         d = day.snapshot
-        w = workers.setdefault(d['worker_id'], dict(name=d['worker'], days=0, minutes=0,
+        w = workers.setdefault(d['worker_id'], dict(worker_id=d['worker_id'], name=d['worker'], days=0, minutes=0,
                               base=Decimal(0), extra=Decimal(0), total=Decimal(0)))
         w['days'] += int(d['worked'])
         w['minutes'] += d['minutes']
@@ -149,14 +160,17 @@ def payroll_summary(payroll):
 
 @retry_locked
 @transaction.atomic
-def payroll_transition(pk, action, reason, user):
+def payroll_transition(pk, action, reason, user, method_id=None):
     lock_farm()
     payroll = Payroll.objects.get(pk=pk)
     before = snapshot(payroll)
     if action == 'pay' and payroll.status == 'generated':
+        method = real_payment_method(method_id)
         payroll.status = 'paid'
         payroll.paid_at = timezone.now()
     elif action == 'cancel' and payroll.status in ('generated', 'paid'):
+        if payroll.whatsapp_messages.filter(status='processing').exists():
+            raise ValidationError('Hay un envío de WhatsApp en proceso. Espere su resultado antes de anular.')
         if payroll.status == 'paid' and not user.is_superuser:
             raise ValidationError('Solo un administrador puede anular una nómina pagada.')
         if not reason.strip():
@@ -166,6 +180,25 @@ def payroll_transition(pk, action, reason, user):
     else:
         raise ValidationError('El estado de esta nómina ya cambió. Recargue el detalle.')
     payroll.save()
+    entry = PayrollExpense.objects.filter(payroll=payroll).select_related('expense').first()
+    if entry and action == 'pay':
+        expense = entry.expense
+        old_expense = snapshot(expense)
+        expense.method = method
+        expense.revision += 1
+        expense.save()
+        audit(user, expense, 'Pago de gasto de nómina', old_expense, snapshot(expense))
+    if action == 'cancel':
+        if entry:
+            entry.active = False
+            entry.cancelled_at = timezone.now()
+            entry.save()
+            audit(user, entry.expense, 'Anular gasto de nómina', after={'motivo': reason, 'nomina': pk})
+        payroll.whatsapp_messages.filter(status__in=['pending', 'blocked', 'failed']).update(status='cancelled', detail='Nómina anulada.')
+    elif action == 'pay':
+        payroll.whatsapp_messages.filter(phase='generated', status__in=['pending', 'blocked', 'failed']).update(status='cancelled', detail='Sustituido por el resumen de pago confirmado.')
+        from .whatsapp import enqueue_payroll
+        enqueue_payroll(payroll, user)
     audit(user, payroll, 'Estado de nómina', before, snapshot(payroll))
     return payroll
 
@@ -229,3 +262,28 @@ def cancel_spray(pk, reason, user):
     obj.revision += 1
     obj.save()
     audit(user, obj, 'Anular programación', before, snapshot(obj))
+
+
+def real_payment_method(pk):
+    method = PaymentMethod.objects.filter(pk=pk, active=True, is_credit=False).first()
+    if not method:
+        raise ValidationError('Seleccione un medio de pago real y activo para confirmar el pago.')
+    return method
+
+
+def create_payroll_expense(payroll, user, method=None):
+    if payroll.total == 0:
+        return None
+    category, _ = ExpenseCategory.objects.get_or_create(name='Nómina')
+    if not category.active:
+        raise ValidationError('Active la categoría de gastos Nómina antes de generar la liquidación.')
+    if method is None:
+        method, _ = PaymentMethod.objects.get_or_create(name='Pendiente de pago de nómina', defaults={'active': False, 'is_credit': False})
+    expense = Expense(date=payroll.end, category=category, description=f'Nómina #{payroll.pk}: {payroll.start} a {payroll.end}',
+                      amount=payroll.total, method=method, reference=f'NO-{payroll.pk}',
+                      token=uuid5(payroll.token, 'expense'), created_by=user, revision=1)
+    expense.full_clean()
+    expense.save()
+    PayrollExpense.objects.create(payroll=payroll, expense=expense)
+    audit(user, expense, 'Gasto automático de nómina', after=snapshot(expense))
+    return expense

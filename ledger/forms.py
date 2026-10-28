@@ -13,11 +13,20 @@ class CustomerForm(forms.ModelForm):
             "name",
             "identification",
             "phone",
+            "whatsapp_opt_in",
             "address",
             "email",
             "notes",
             "active",
         ]
+
+
+    def clean(self):
+        data = super().clean()
+        from .whatsapp import normalize_phone
+        if data.get('whatsapp_opt_in') and not normalize_phone(data.get('phone')):
+            self.add_error('phone', 'Ingrese un WhatsApp válido para recibir comprobantes.')
+        return data
 
 
 class ProductForm(forms.ModelForm):

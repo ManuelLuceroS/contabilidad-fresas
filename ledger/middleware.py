@@ -21,7 +21,7 @@ class OfflineReplicaMiddleware:
         from django.conf import settings
         from django.http import HttpResponseForbidden
         from .models import SyncState
-        if settings.OFFLINE_NODE and request.path.startswith(("/nomina/", "/fumigacion/")):
+        if settings.OFFLINE_NODE and request.path.startswith(("/nomina/", "/fumigacion/", "/whatsapp/", "/api/whatsapp/")):
             return HttpResponseForbidden("Nómina y fumigación se administran en la instalación principal. La sincronización actual solo incluye ventas, abonos, gastos y sus catálogos.")
         if settings.OFFLINE_NODE and request.method not in ("GET", "HEAD", "OPTIONS"):
             path = request.path

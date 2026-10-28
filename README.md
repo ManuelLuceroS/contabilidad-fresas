@@ -520,9 +520,15 @@ convierten en fórmulas de Excel.
 
 Para corregir una liquidación, anúlela indicando el motivo, corrija su asistencia
 y genere una nueva. La liquidación original y su auditoría permanecen intactas.
-Solo un superusuario puede anular una nómina pagada. La confirmación de pago es
-operativa: **no crea automáticamente un gasto ni un movimiento de caja**, evitando
-duplicar gastos de nómina registrados por el flujo existente.
+Solo un superusuario puede anular una nómina pagada. Cada nómina nueva con total positivo crea un **único gasto** de categoría Nómina,
+con fecha del fin del período y referencia `NO-<id>`. Hasta confirmar el pago aparece
+con medio **Pendiente de pago de nómina**. Al confirmar el pago debe elegir un medio
+real: se actualiza ese mismo gasto, sin crear otro. Si ya se pagó al generar, puede
+marcarlo y seleccionar el medio en el formulario de generación. La anulación excluye
+el gasto de los totales y de la copia offline, conservando los registros y la auditoría.
+El gasto vinculado no se edita manualmente: sus correcciones se administran desde la
+nómina. Las nóminas anteriores a esta integración no crean gastos retroactivos para
+evitar duplicar gastos manuales históricos. Un total cero no genera gasto ni avisos.
 
 ### Uso de fumigación
 
@@ -568,8 +574,8 @@ PDF siguen requiriendo sesión y permisos de ventas/pagos.
 Puede configurar `BUSINESS_NAME` para el encabezado del PDF y
 `WHATSAPP_COUNTRY_CODE` para números locales de diez dígitos (predeterminado `57`,
 Colombia). Los números internacionales con `+` conservan su prefijo. No hace falta
-una API externa para este flujo. El envío automático por WhatsApp Business Platform
-no está implementado: requeriría una integración oficial y credenciales privadas.
+una API externa para este flujo. El envío oficial por WhatsApp Business Platform está integrado y requiere activar
+la cuenta, las credenciales y las plantillas descritas a continuación.
 La compatibilidad real del diálogo de compartir depende del navegador/dispositivo;
 la alternativa de descarga permanece disponible.
 
@@ -608,3 +614,96 @@ anchos de escritorio y móvil, y ejecutó los flujos JavaScript de productos, fe
 sugeridas y compartir/descargar con APIs simuladas. No envió mensajes reales a
 clientes ni comprobó una integración oficial de WhatsApp. PostgreSQL y los
 navegadores concretos de los usuarios requieren verificación en su despliegue.
+
+
+## WhatsApp desde el número de la empresa y gastos de nómina
+
+La ampliación `0007` agrega teléfonos de trabajadores, autorización de los contactos,
+el vínculo de gasto de nómina y una cola privada de comprobantes. `0008` agrega al
+grupo Operadores el permiso `send_whatsappmessage`. No modifica las cifras históricas,
+no registra gastos retroactivos ni envía mensajes de ventas o nóminas antiguas.
+Los nuevos campos de contacto tienen valores predeterminados en la base para que
+la versión anterior pueda seguir escribiendo durante un despliegue gradual.
+
+El remitente configurado es **+57 3115893850**. Un teléfono escrito en configuración
+no basta para enviar desde él: el número debe estar vinculado a una cuenta de
+**WhatsApp Business Platform / Cloud API**. La app WhatsApp Business por sí sola no
+proporciona credenciales de Cloud API. El sistema verifica en Meta que el identificador
+de teléfono configurado corresponda al remitente antes de cargar/enviar documentos.
+No cambia el destinatario al teléfono de la empresa: usa el teléfono de cada cliente
+o trabajador.
+
+### Activación por el administrador
+
+1. Vincular/verificar el número con Meta y obtener su `WHATSAPP_PHONE_NUMBER_ID` y un
+   token de usuario de sistema con los permisos de mensajería necesarios. Usar la
+   configuración privada de producción en Vercel; no pegar secretos en el chat,
+   documentos compartidos, código ni `.env.example`.
+2. Crear dos plantillas de utilidad aprobadas, con **cabecera DOCUMENT** y cuerpo con
+   **tres parámetros de texto posicionales**. Ejemplos de contenido para solicitar
+   aprobación (los nombres reales aprobados se configuran en Vercel):
+   - Venta: `Hola {{1}}, adjuntamos el comprobante {{2}} por {{3}}.`
+   - Nómina: `Hola {{1}}, adjuntamos el resumen de nómina del período {{2}}. {{3}}.`
+   Los parámetros enviados son nombre, consecutivo/período e importe/resumen,
+   respectivamente. Elegir el idioma aprobado en `WHATSAPP_TEMPLATE_LANGUAGE`.
+3. Configurar `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
+   `WHATSAPP_SALE_TEMPLATE`, `WHATSAPP_PAYROLL_TEMPLATE`,
+   `WHATSAPP_SENDER_NUMBER=573115893850` y `WHATSAPP_ENABLED=true`.
+   La versión Graph API está fijada mediante `WHATSAPP_API_VERSION` (base `v25.0`);
+   verificarla y actualizarla al mantener la integración.
+4. Configurar el webhook de Meta en
+   `https://contabilidad-fresas.vercel.app/api/whatsapp/webhook/`, con
+   `WHATSAPP_VERIFY_TOKEN` privado y `WHATSAPP_APP_SECRET` de la aplicación de Meta.
+   Suscribir los estados de mensajes. Sin webhook, una solicitud puede aparecer
+   aceptada, pero no se afirma que haya llegado al destinatario.
+5. En **Clientes** y **Trabajadores**, registrar su WhatsApp y la autorización para
+   recibir comprobantes/resúmenes. El sistema vuelve a comprobar la autorización
+   al enviar; una revocación bloquea los mensajes que aún no se han enviado.
+
+Fuentes de integración: [documentación oficial de Meta en Postman](https://www.postman.com/meta/whatsapp-business-platform/documentation/wlk6lh4/whatsapp-cloud-api)
+y [política de mensajería de WhatsApp](https://whatsappbusiness.com/policy/).
+
+### Operación y límites de entrega
+
+Las ventas nuevas con autorización crean su comprobante en la cola dentro de la misma
+transacción que registra la venta. Una venta previa puede prepararse con el botón
+**Preparar envío automático al cliente**, sin crear otra venta. Las nóminas nuevas
+preparan un PDF **por trabajador**, con sus días, extras, importes y estado real del
+pago. Nunca se envía al trabajador la nómina completa ni información de sus compañeros.
+Una nómina generada sin pago confirmado se identifica como pendiente; confirmar el
+pago prepara su resumen definitivo y cancela el borrador aún no enviado.
+
+Con la integración activa, la pantalla procesa la cola inmediatamente, de un
+comprobante por solicitud. Además, `vercel.json` incluye un procesador diario a las
+13:00 UTC, compatible con el plan Hobby del proyecto, para pendientes cuando se cerró
+la pantalla. El endpoint `/api/whatsapp/cola/` solo acepta llamadas con
+`Authorization: Bearer <CRON_SECRET>`; la clave se configura en Vercel y nunca se
+expone al navegador. Cada ejecución limita el lote y el tiempo de procesamiento;
+una cola extensa puede requerir varias ejecuciones o un plan/procesador de mayor
+frecuencia. No se promete procesamiento inmediato con la pantalla cerrada.
+
+Los PDF se cargan como medios privados a Meta y se adjuntan por identificador; no se
+publican enlaces a facturas o sueldos. La cola guarda el documento de cada operación
+para conservar su contenido original, separado de las consultas posteriores.
+Los estados son pendiente, bloqueado, en proceso, aceptado, enviado, entregado,
+leído, rechazado, por verificar o cancelado. Los callbacks se validan con HMAC de
+la aplicación y se comprueba el destinatario. Los eventos repetidos o fuera de orden
+no retroceden un estado de entrega confirmado.
+
+Los reintentos de una operación no generan otra fila de envío. Si un corte de red
+impide conocer el resultado, queda **Envío por verificar** y se detiene el reintento
+automático. Revise WhatsApp antes de autorizar un nuevo intento: una API externa no
+permite garantizar exactamente una entrega tras perder su respuesta. Los intentos
+interrumpidos se pueden revisar desde la pantalla. No se permite anular una nómina
+mientras tenga un envío en curso. Un mensaje ya entregado no se puede retirar al
+anular; su registro se conserva.
+
+Mientras no se vincule Meta, los documentos siguen disponibles para descargar y
+compartir manualmente. Para que salgan del 3115893850, abra WhatsApp con esa cuenta;
+el navegador no puede seleccionar ni verificar una cuenta remitente. La interfaz
+muestra esta limitación y no registra estos enlaces como envíos confirmados.
+
+Pruebas adicionales: `ledger/test_whatsapp_payroll.py` valida gastos únicos,
+anulaciones, pago confirmado, documentos individuales, consentimiento, remitente,
+plantillas, callbacks, permisos y resultados de red inciertos, con la API simulada.
+No envía pruebas a números reales ni valida credenciales inexistentes.

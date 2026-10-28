@@ -3,7 +3,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import formset_factory
 from django.utils import timezone
-from .models import Worker, PayrollSettings, SprayProduct, SprayApplication
+from .models import Worker, PayrollSettings, SprayProduct, SprayApplication, PaymentMethod
 
 DATE = {'type': 'date'}
 
@@ -20,8 +20,15 @@ class RevisionForm(forms.ModelForm):
 class WorkerForm(RevisionForm):
     class Meta:
         model = Worker
-        fields = ['name', 'identification', 'occupation', 'joined_on', 'daily_rate', 'active', 'notes']
+        fields = ['name', 'identification', 'phone', 'whatsapp_opt_in', 'occupation', 'joined_on', 'daily_rate', 'active', 'notes']
         widgets = {'joined_on': forms.DateInput(attrs=DATE, format='%Y-%m-%d')}
+
+    def clean(self):
+        data = super().clean()
+        from .whatsapp import normalize_phone
+        if data.get('whatsapp_opt_in') and not normalize_phone(data.get('phone')):
+            self.add_error('phone', 'Ingrese un WhatsApp válido para recibir los resúmenes.')
+        return data
 
 
 class SettingsForm(RevisionForm):
@@ -39,12 +46,16 @@ class SettingsForm(RevisionForm):
 
 
 class PeriodForm(forms.Form):
+    paid = forms.BooleanField(label='Esta nómina ya fue pagada', required=False)
+    payment_method = forms.ModelChoiceField(label='Medio de pago (si ya se pagó)', queryset=PaymentMethod.objects.filter(active=True, is_credit=False), required=False)
     start = forms.DateField(label='Fecha inicial', widget=forms.DateInput(attrs=DATE))
     end = forms.DateField(label='Fecha final', widget=forms.DateInput(attrs=DATE))
     token = forms.UUIDField(widget=forms.HiddenInput)
 
     def clean(self):
         d = super().clean()
+        if d.get('paid') and not d.get('payment_method'):
+            self.add_error('payment_method', 'Seleccione cómo se pagó la nómina.')
         if d.get('start') and d.get('end') and d['start'] > d['end']:
             raise ValidationError('La fecha final debe ser igual o posterior a la inicial.')
         if d.get('end') and d['end'] > timezone.localdate():

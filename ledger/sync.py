@@ -131,9 +131,16 @@ def snapshot():
     if connection.vendor == 'postgresql':
         with connection.cursor() as cursor:
             cursor.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')
-    objects = [obj for model in (*CATALOG, *FINANCIAL) for obj in model.objects.all()]
+    from .reporting import accounting_expenses
+    objects = [obj for model in (*CATALOG, *FINANCIAL)
+               for obj in (accounting_expenses() if model is Expense else model.objects.all())]
+    serialized = json.loads(serializers.serialize('json', objects))
+    # La autorización para enviar se administra en la nube; conserva clientes offline antiguos.
+    for obj in serialized:
+        if obj['model'] == 'ledger.customer':
+            obj['fields'].pop('whatsapp_opt_in', None)
     return {'business': settings.SYNC_BUSINESS,
-            'objects': json.loads(serializers.serialize('json', objects)),
+            'objects': serialized,
             'users': dict(get_user_model().objects.values_list('id', 'username'))}
 
 

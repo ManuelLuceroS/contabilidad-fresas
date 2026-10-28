@@ -158,3 +158,16 @@ if OFFLINE_NODE and (ON_VERCEL or not DATABASES["default"]["ENGINE"].endswith("s
 # Nombre visible en comprobantes; no son credenciales.
 BUSINESS_NAME = os.getenv("BUSINESS_NAME", "Mi Contabilidad")
 WHATSAPP_COUNTRY_CODE = os.getenv("WHATSAPP_COUNTRY_CODE", "57")
+
+# WhatsApp Cloud API: el número de teléfono no sustituye las credenciales de Meta.
+WHATSAPP_SENDER_NUMBER = os.getenv('WHATSAPP_SENDER_NUMBER', '573115893850')
+WHATSAPP_ENABLED = os.getenv('WHATSAPP_ENABLED', 'false').lower() == 'true'
+WHATSAPP_ACCESS_TOKEN = os.getenv('WHATSAPP_ACCESS_TOKEN', '')
+WHATSAPP_PHONE_NUMBER_ID = os.getenv('WHATSAPP_PHONE_NUMBER_ID', '')
+WHATSAPP_API_VERSION = os.getenv('WHATSAPP_API_VERSION', 'v25.0')
+WHATSAPP_SALE_TEMPLATE = os.getenv('WHATSAPP_SALE_TEMPLATE', '')
+WHATSAPP_PAYROLL_TEMPLATE = os.getenv('WHATSAPP_PAYROLL_TEMPLATE', '')
+WHATSAPP_TEMPLATE_LANGUAGE = os.getenv('WHATSAPP_TEMPLATE_LANGUAGE', 'es_CO')
+WHATSAPP_APP_SECRET = os.getenv('WHATSAPP_APP_SECRET', '')
+WHATSAPP_VERIFY_TOKEN = os.getenv('WHATSAPP_VERIFY_TOKEN', '')
+CRON_SECRET = os.getenv('CRON_SECRET', '')

@@ -1,5 +1,4 @@
 """Comprobante privado y opciones de compartir sin publicar datos del cliente."""
-import re
 from urllib.parse import urlencode
 from django.conf import settings
 from django.utils import timezone
@@ -9,15 +8,9 @@ from .templatetags.money import cop, plain_number
 
 
 def whatsapp_url(sale):
-    raw = sale.customer.phone.strip()
-    if re.search(r'[^+0-9\s().-]', raw) or '+' in raw[1:]:
-        return ''
-    digits = re.sub(r'\D', '', raw)
-    if raw.startswith('00'):
-        digits = digits[2:]
-    elif not raw.startswith('+') and len(digits) == 10:
-        digits = settings.WHATSAPP_COUNTRY_CODE + digits
-    if not digits.isascii() or not digits.isdigit() or not 8 <= len(digits) <= 15 or digits.startswith('0'):
+    from .whatsapp import normalize_phone
+    digits = normalize_phone(sale.customer.phone)
+    if not digits:
         return ''
     message = f'Hola {sale.customer_name}, te comparto el comprobante {sale} de {settings.BUSINESS_NAME} por {cop(sale.total)}. Adjunto el PDF en esta conversación.'
     return f'https://wa.me/{digits}?' + urlencode({'text': message})

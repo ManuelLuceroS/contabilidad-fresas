@@ -20,7 +20,8 @@ class Timestamp(models.Model):
 class Customer(Timestamp):
     name = models.CharField("Nombre o razón social", max_length=180)
     identification = models.CharField("Identificación", max_length=40, blank=True)
-    phone = models.CharField("Teléfono", max_length=40, blank=True)
+    phone = models.CharField("Teléfono / WhatsApp", max_length=40, blank=True)
+    whatsapp_opt_in = models.BooleanField("Autorizó recibir comprobantes por WhatsApp", default=False, db_default=False)
     address = models.CharField("Dirección", max_length=240, blank=True)
     email = models.EmailField("Correo electrónico", blank=True)
     notes = models.TextField("Observaciones", blank=True)
@@ -272,4 +273,6 @@ class SyncReceipt(models.Model):
 
 # Django registra también los modelos agrícolas dentro de la aplicación existente.
 from .farm_models import (Worker, PayrollSettings, Attendance, Payroll, PayrollDay,
-                          SprayProduct, SprayApplication, SprayLine)  # noqa: E402,F401
+                          SprayProduct, SprayApplication, SprayLine, PayrollExpense)  # noqa: E402,F401
+
+from .message_models import WhatsAppMessage  # noqa: E402,F401

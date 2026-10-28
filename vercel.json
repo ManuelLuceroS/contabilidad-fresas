@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/whatsapp/cola/",
+      "schedule": "0 13 * * *"
+    }
+  ]
+}

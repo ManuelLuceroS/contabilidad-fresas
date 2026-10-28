@@ -145,7 +145,8 @@ def dashboard(request):
     start, end = period(request, True)
     today = timezone.localdate()
     sales = Sale.objects.prefetch_related("allocations")
-    expenses = Expense.objects.all()
+    from .reporting import accounting_expenses
+    expenses = accounting_expenses()
     selected = list(date_filter(sales, "occurred_at__date", start, end))
     selected_expenses = list(date_filter(expenses, "date", start, end))
     payments = date_filter(Payment.objects.all(), "date", start, end)
@@ -445,12 +446,14 @@ def sale_detail(request, pk=None, token=None):
     )
     totals = line_totals(sale.lines.all())
     from .receipt import sale_receipt, whatsapp_url
+    from .whatsapp_views import queue_context
     if request.GET.get("export") == "pdf":
         return sale_receipt(sale, inline=request.GET.get("view") == "1")
     return render(
         request,
         "ledger/sale_detail.html",
-        dict(title=str(sale), sale=sale, totals=totals, whatsapp_url=whatsapp_url(sale)),
+        dict(title=str(sale), sale=sale, totals=totals, whatsapp_url=whatsapp_url(sale),
+             **queue_context(sale.whatsapp_messages.select_related('sale__customer'))),
     )
 
 
@@ -727,8 +730,9 @@ def payment_detail(request, pk=None, token=None):
 @permission_required("ledger.view_expense", raise_exception=True)
 def expenses(request):
     start, end = period(request, True)
+    from .reporting import accounting_expenses
     qs = date_filter(
-        Expense.objects.select_related("category", "method"), "date", start, end
+        accounting_expenses().select_related("category", "method"), "date", start, end
     )
     if request.GET.get("category"):
         category = request.GET["category"]
@@ -789,6 +793,10 @@ def expense_edit(request, pk=None):
     ):
         raise PermissionDenied
     instance = get_object_or_404(Expense, pk=pk) if pk else None
+    if instance and hasattr(instance, 'payroll_entry'):
+        if request.method == 'POST':
+            messages.error(request, 'Este gasto se administra desde su nómina para conservar los totales.')
+        return redirect('payroll_detail', pk=instance.payroll_entry.payroll_id)
     form = ExpenseForm(request.POST or None, instance=instance)
     token = request.POST.get("token") or str(uuid.uuid4())
     if request.method == "POST" and form.is_valid():

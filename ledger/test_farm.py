@@ -115,7 +115,9 @@ class FarmTests(TestCase):
         token = uuid.uuid4()
         p = self.generate(token=token)
         self.assertEqual(self.generate(token=token).pk, p.pk)
-        payroll_transition(p.pk, 'pay', '', self.admin)
+        from .models import PaymentMethod
+        method = PaymentMethod.objects.create(name='Efectivo de nómina')
+        payroll_transition(p.pk, 'pay', '', self.admin, method_id=method.pk)
         original = list(p.days.values_list('snapshot', flat=True))
         with self.assertRaises(ValidationError):
             save_attendance(self.day, [self.row(self.a, hours=1)], self.admin)
@@ -376,12 +378,16 @@ class FarmConcurrencyTests(TransactionTestCase):
         results = self.parallel(lambda i, user: generate_payroll(self.day, self.day, uuid.uuid4(), user).pk)
         self.assertEqual(results.count('rejected'), 1)
         self.assertEqual(Payroll.objects.count(), 1)
+        from .models import Expense
+        self.assertEqual(Expense.objects.count(), 1)
 
     def test_parallel_same_token_is_idempotent(self):
         token = uuid.uuid4()
         results = self.parallel(lambda i, user: generate_payroll(self.day, self.day, token, user).pk)
         self.assertEqual(results[0], results[1])
         self.assertEqual(Payroll.objects.count(), 1)
+        from .models import Expense
+        self.assertEqual(Expense.objects.count(), 1)
 
     def test_parallel_attendance_changes_reject_stale_revision(self):
         def action(i, user):

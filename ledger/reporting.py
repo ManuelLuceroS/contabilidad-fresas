@@ -53,3 +53,9 @@ def sales_summary(sales):
         "total": sum((s.total for s in sales), ZERO),
         "count": len(sales),
     }
+
+
+def accounting_expenses():
+    """Las causaciones anuladas permanecen en el historial pero no suman gasto."""
+    from .models import Expense
+    return Expense.objects.exclude(payroll_entry__active=False)

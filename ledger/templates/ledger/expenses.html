@@ -1,6 +1,6 @@
 {% extends 'ledger/base.html' %}{% load money ui %}
 {% block eyebrow %}Egresos{% endblock %}
-{% block subtitle %}Registra tus salidas de dinero y descubre en qué categorías se concentran.{% endblock %}
+{% block subtitle %}Consulta los gastos causados y su medio de pago. Las nóminas pendientes también se incluyen como gasto de la empresa.{% endblock %}
 {% block actions %}<a class="btn btn-ghost" href="/categorias/">{% icon 'tags' 16 %} Categorías</a><a class="btn btn-primary" href="/gastos/nuevo/">{% icon 'plus' 17 %} Registrar gasto</a>{% endblock %}
 {% block content %}
 {% include 'ledger/filters.html' %}

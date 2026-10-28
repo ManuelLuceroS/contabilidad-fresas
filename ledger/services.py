@@ -182,6 +182,8 @@ def create_sale(*, user, customer_id, rows, method, initial, cash_method, token,
         Allocation.objects.create(payment=payment, sale=sale, amount=initial)
         audit(user, payment, "Pago inicial", after={"valor": str(initial)})
     audit(user, sale, "Venta registrada", after={"total": str(total)})
+    from .whatsapp import enqueue_sale
+    enqueue_sale(sale, user)
     return sale
 
 

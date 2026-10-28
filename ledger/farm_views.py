@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django import forms
-from .models import Worker, PayrollSettings, Attendance, Payroll, SprayProduct, SprayApplication, Audit
+from .models import PayrollExpense, PaymentMethod, Worker, PayrollSettings, Attendance, Payroll, SprayProduct, SprayApplication, Audit
 from .farm_forms import (WorkerForm, SettingsForm, SprayProductForm, AttendanceRows, PeriodForm, SprayForm, SprayRows)
 from .farm_services import (save_catalog, save_attendance, generate_payroll, payroll_summary,
                             payroll_transition, save_spray, cancel_spray)
@@ -127,14 +127,14 @@ def payroll_list(request):
 
 
 @login_required
-@permission_required(('ledger.add_payroll', 'ledger.view_attendance', 'ledger.view_worker', 'ledger.view_payroll'), raise_exception=True)
+@permission_required(('ledger.add_payroll', 'ledger.add_expense', 'ledger.view_attendance', 'ledger.view_worker', 'ledger.view_payroll'), raise_exception=True)
 def payroll_new(request):
     today = timezone.localdate()
     form = PeriodForm(request.POST or None, initial={'start': today - timedelta(days=today.weekday()), 'end': today, 'token': uuid.uuid4()})
     if request.method == 'POST' and form.is_valid():
         try:
             p = generate_payroll(user=request.user, **form.cleaned_data)
-            messages.success(request, 'Nómina generada y guardada. Revise el detalle antes de confirmar el pago.')
+            messages.success(request, 'Nómina guardada con pago confirmado.' if p.status == 'paid' else 'Nómina guardada. Revise el detalle antes de confirmar el pago.')
             return redirect('payroll_detail', pk=p.pk)
         except ValidationError as exc:
             form.add_error(None, exc)
@@ -147,16 +147,22 @@ def payroll_detail(request, pk):
     p = get_object_or_404(Payroll, pk=pk)
     if request.method == 'POST':
         require(request.user, 'ledger.change_payroll')
+        if PayrollExpense.objects.filter(payroll=p).exists():
+            require(request.user, 'ledger.change_expense')
         try:
-            payroll_transition(pk, request.POST.get('action'), request.POST.get('reason', ''), request.user)
+            payroll_transition(pk, request.POST.get('action'), request.POST.get('reason', ''), request.user, method_id=request.POST.get('payment_method'))
             messages.success(request, 'Estado actualizado. La operación quedó auditada.')
             return redirect('payroll_detail', pk=pk)
         except ValidationError as exc:
             notify_error(request, exc)
     if request.GET.get('export') == 'xlsx':
         return payroll_xlsx(p)
+    from .whatsapp_views import queue_context
     return render(request, 'ledger/payroll_detail.html', dict(title=f'Nómina #{p.pk}', payroll=p, summary=payroll_summary(p),
-        history=Audit.objects.filter(entity=Payroll._meta.label, object_id=pk).order_by('-date')))
+        history=Audit.objects.filter(entity=Payroll._meta.label, object_id=pk).order_by('-date'),
+        expense_entry=PayrollExpense.objects.filter(payroll=p).select_related('expense__method').first(),
+        payment_methods=PaymentMethod.objects.filter(active=True, is_credit=False),
+        **queue_context(p.whatsapp_messages.select_related('worker', 'payroll'))))
 
 
 @login_required

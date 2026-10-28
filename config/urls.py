@@ -5,8 +5,15 @@ from ledger.sync import endpoint
 from ledger.sync_views import sync_status
 from ledger import mobile_views as mobile
 from ledger import farm_views as farm
+from ledger import whatsapp_views as wa
 
 urlpatterns = [
+    path('ventas/<int:pk>/whatsapp/', wa.prepare_sale, name='whatsapp_prepare_sale'),
+    path('whatsapp/envios/<uuid:pk>/procesar/', wa.process, name='whatsapp_process'),
+    path('whatsapp/envios/<uuid:pk>/reintentar/', wa.retry, name='whatsapp_retry'),
+    path('api/whatsapp/cola/', wa.cron, name='whatsapp_cron'),
+    path('api/whatsapp/webhook/', wa.webhook, name='whatsapp_webhook'),
+    path('nomina/<int:pk>/trabajador/<int:worker_id>/pdf/', wa.payroll_document, name='payroll_document'),
     path("nomina/", farm.payroll_list, name="payroll_list"),
     path("nomina/generar/", farm.payroll_new, name="payroll_new"),
     path("nomina/asistencia/", farm.attendance, name="attendance"),

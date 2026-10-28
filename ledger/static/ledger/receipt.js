@@ -1,7 +1,6 @@
 (() => {
-  const button = document.getElementById('share-receipt');
-  if (!button) return;
-  const status = document.getElementById('receipt-share-status');
+  document.querySelectorAll('#share-receipt, [data-share-file]').forEach(button => {
+  const status = document.getElementById(button.dataset.statusId || 'receipt-share-status');
   let pdfPromise;
   function prepare() {
     // Se genera desde la venta guardada; la URL sigue exigiendo sesión y permisos.
@@ -33,5 +32,6 @@
         pdfPromise = prepare(); pdfPromise.catch(() => {});
       }
     } finally { button.disabled = false; }
+  });
   });
 })();
